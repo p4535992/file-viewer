@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": false,
   "type": "module",
-  "description": "Standalone code, text, and Markdown renderer for File Viewer; Mermaid, patch diff, and Git bundle tools are explicit opt-in capabilities.",
+  "description": "Standalone code, text, and Markdown renderer for File Viewer; Mermaid, patch diff, Git bundle tools, and readable Prettier views are explicit opt-in capabilities.",
   "keywords": [
     "file-viewer",
     "renderer",
@@ -13,6 +13,7 @@
     "patch",
     "git-bundle",
     "highlight.js",
+    "prettier",
     "document-preview",
     "document-viewer",
     "file-preview",
@@ -55,10 +56,11 @@
     "file-viewer.capability.json",
     "README.md",
     "README.en.md",
+    "THIRD_PARTY_NOTICES.md",
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.json && node --test test/*.test.mjs",
+    "build": "tsc -b tsconfig.json && node scripts/copy-prettier-runtime.mjs && node --test test/*.test.mjs",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {

@@ -13,6 +13,9 @@ export {
 } from './textEncoding';
 export type {
   DecodedFileViewerText,
+  FileViewerPrettyPrintOptions,
+  FileViewerPrettyPrintProseWrap,
+  FileViewerPrettyPrintRule,
   FileViewerTextEncoding,
   ResolvedFileViewerTextEncoding,
   ResolvedFileViewerTextSource,

@@ -18,6 +18,32 @@ export interface ResolvedFileViewerTextSource {
   bomLength: number;
 }
 
+export type FileViewerPrettyPrintProseWrap = 'always' | 'never' | 'preserve';
+
+export interface FileViewerPrettyPrintRule {
+  /** Number of spaces per indentation level. Accepted values are integers from 1 to 16. */
+  tabWidth?: number;
+  /** Uses tabs instead of spaces for indentation when true. */
+  useTabs?: boolean;
+  /**
+   * Preferred formatted line length. Accepted values are positive integers up
+   * to 1000. This is a Prettier formatting hint, not a viewport-width limit.
+   */
+  printWidth?: number;
+  /**
+   * Controls prose reflow for formats such as Markdown. Defaults to Prettier's
+   * `preserve` behavior when omitted.
+   */
+  proseWrap?: FileViewerPrettyPrintProseWrap;
+}
+
+export interface FileViewerPrettyPrintOptions extends FileViewerPrettyPrintRule {
+  /** Per-extension overrides. Keys accept forms such as `json`, `.json`, or `*.json`. */
+  byExtension?: Record<string, FileViewerPrettyPrintRule>;
+  /** Per-MIME overrides. Parameters such as `charset` are ignored while matching. */
+  byMimeType?: Record<string, FileViewerPrettyPrintRule>;
+}
+
 const normalizeEncoding = (
   encoding: FileViewerTextEncoding | string | undefined
 ): FileViewerTextEncoding => {
@@ -204,3 +230,34 @@ export const decodeFileViewerTextBuffer = (
     encoding: resolved.encoding
   };
 };
+
+declare module '../contracts/types' {
+  interface FileViewerTextOptions {
+    /**
+     * Visually wraps long logical lines without changing source bytes or adding
+     * line breaks. Defaults to false.
+     */
+    wrapLongLines?: boolean;
+    /**
+     * Shows a renderer-local control that toggles visual line wrapping while
+     * the preview is open. Defaults to false; `wrapLongLines` is the initial state.
+     */
+    wrapLongLinesToggle?: boolean;
+    /**
+     * Formats supported structured/source text for display through the lazy
+     * Prettier runtime. Defaults to false.
+     */
+    prettyPrint?: boolean;
+    /**
+     * Maximum original source byte length eligible for Prettier. Defaults to
+     * the effective virtualizeAboveBytes value, or 512 KiB when omitted.
+     */
+    prettyPrintMaxBytes?: number;
+    /**
+     * Safe Prettier layout options with optional per-extension/per-MIME
+     * overrides. MIME rules take precedence over extension rules and global
+     * values. These options never enable or disable visual line wrapping.
+     */
+    prettyPrintOptions?: FileViewerPrettyPrintOptions;
+  }
+}

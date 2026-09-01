@@ -21,6 +21,25 @@ export type {
   FileViewerDiffToHtml,
   FileViewerPakoModule,
 } from './optionalCapabilities.js';
+export {
+  DEFAULT_FILE_VIEWER_PRETTY_PRINT_MAX_BYTES,
+  formatFileViewerTextForDisplay,
+  resolveFileViewerPrettyPrintMaxBytes,
+  resolveFileViewerPrettyPrintOptions,
+  resolveFileViewerPrettyPrintPlan,
+  shouldAttemptFileViewerPrettyPrint,
+} from './prettyPrint.js';
+export type {
+  FileViewerPrettyPrintPlan,
+  FileViewerPrettyPrintRequest,
+  FileViewerPrettyPrintResult,
+  FileViewerPrettierRuntimeModule,
+} from './prettyPrint.js';
+export type {
+  FileViewerPrettyPrintOptions,
+  FileViewerPrettyPrintProseWrap,
+  FileViewerPrettyPrintRule,
+} from '@file-viewer/core';
 export { sanitizeFileViewerRichHtml } from './sanitizeHtml.js';
 
 const textRendererIds = ['code', 'markdown'] as const;
@@ -40,16 +59,23 @@ export const renderFileViewerCode: FileRenderHandler<FileViewerRenderedInstance,
   target,
   type,
   context?: FileRenderContext
-) => import('./code.js').then(({ default: renderCode }) => renderCode(buffer, target, type, context));
+) => import('./code.js').then(({ default: renderCode }) =>
+  renderCode(buffer, target, type, context));
 
 export const renderFileViewerMarkdown: FileRenderHandler<FileViewerRenderedInstance, HTMLDivElement> = (
   buffer,
   target,
   type,
   context
-) => import('./largeText.js').then(async ({ default: renderLargeText, shouldVirtualizeMarkdownBuffer }) => {
+) => import('./largeText.js').then(async ({ shouldVirtualizeMarkdownBuffer }) => {
   if (shouldVirtualizeMarkdownBuffer(buffer, context)) {
-    return renderLargeText(buffer, target, type || 'md', context);
+    const { renderFileViewerVirtualTextWithWrapToggle } = await import('./wrapToggle.js');
+    return renderFileViewerVirtualTextWithWrapToggle(
+      buffer,
+      target,
+      type || 'md',
+      context
+    );
   }
   const { default: renderMarkdown } = await import('./markdown.js');
   return renderMarkdown(buffer, target, context);

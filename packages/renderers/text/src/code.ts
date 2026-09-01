@@ -1,5 +1,4 @@
 import {
-  createFileViewerTranslator,
   createFileViewerZoomChangeEmitter as createZoomChangeEmitter,
   decodeFileViewerTextBuffer,
   registerFileViewerZoomProvider,
@@ -11,6 +10,15 @@ import {
 import type { HLJSApi, LanguageFn } from 'highlight.js'
 import { codeStyle } from './codeStyle.js'
 import renderLargeText, { shouldVirtualizeTextBuffer } from './largeText.js'
+import {
+  formatFileViewerTextForDisplay,
+  shouldAttemptFileViewerPrettyPrint
+} from './prettyPrint.js'
+import {
+  createFileViewerWrapToggleButton,
+  renderFileViewerVirtualTextWithWrapToggle,
+  updateFileViewerWrapToggleButton
+} from './wrapToggle.js'
 
 const languageMap: Record<string, string> = {
   bash: 'bash',
@@ -96,11 +104,12 @@ let highlighterPromise: Promise<HLJSApi> | null = null
 const registeredLanguages = new Set<string>()
 
 const createElement = <TagName extends keyof HTMLElementTagNameMap>(
+  documentRef: Document,
   tagName: TagName,
   className?: string,
   text?: string
 ) => {
-  const element = document.createElement(tagName)
+  const element = documentRef.createElement(tagName)
   if (className) {
     element.className = className
   }
@@ -110,8 +119,8 @@ const createElement = <TagName extends keyof HTMLElementTagNameMap>(
   return element
 }
 
-const createStyle = () => {
-  const style = document.createElement('style')
+const createStyle = (documentRef: Document) => {
+  const style = documentRef.createElement('style')
   style.textContent = codeStyle
   return style
 }
@@ -166,11 +175,84 @@ const createLineNumberText = (lineCount: number) => {
   return Array.from({ length: lineCount }, (_, index) => String(index + 1)).join('\n')
 }
 
+const createHighlightedLineRows = (documentRef: Document, highlightedHtml: string) => {
+  const template = documentRef.createElement('template')
+  template.innerHTML = highlightedHtml
+  const lineFragments: DocumentFragment[] = [documentRef.createDocumentFragment()]
+  const sourceStack: Element[] = []
+  let targetStack: Node[] = [lineFragments[0]]
+
+  const currentTarget = () => targetStack[targetStack.length - 1]
+
+  const startNewLine = () => {
+    const fragment = documentRef.createDocumentFragment()
+    lineFragments.push(fragment)
+    targetStack = [fragment]
+    for (const sourceElement of sourceStack) {
+      const clone = sourceElement.cloneNode(false) as Element
+      currentTarget().appendChild(clone)
+      targetStack.push(clone)
+    }
+  }
+
+  const appendText = (value: string) => {
+    let start = 0
+    const lineBreaks = /\r\n|\r|\n/g
+    let match: RegExpExecArray | null
+    while ((match = lineBreaks.exec(value))) {
+      currentTarget().appendChild(documentRef.createTextNode(value.slice(start, match.index)))
+      start = match.index + match[0].length
+      startNewLine()
+    }
+    currentTarget().appendChild(documentRef.createTextNode(value.slice(start)))
+  }
+
+  const visit = (node: Node) => {
+    if (node.nodeType === 3) {
+      appendText(node.nodeValue || '')
+      return
+    }
+    if (node.nodeType === 1) {
+      const sourceElement = node as Element
+      const clone = sourceElement.cloneNode(false) as Element
+      currentTarget().appendChild(clone)
+      sourceStack.push(sourceElement)
+      targetStack.push(clone)
+      for (const child of Array.from(sourceElement.childNodes)) {
+        visit(child)
+      }
+      sourceStack.pop()
+      targetStack.pop()
+      return
+    }
+    currentTarget().appendChild(node.cloneNode(true))
+  }
+
+  for (const node of Array.from(template.content.childNodes)) {
+    visit(node)
+  }
+
+  const fragment = documentRef.createDocumentFragment()
+  lineFragments.forEach((line, index) => {
+    const row = documentRef.createElement('span')
+    row.className = 'code-line'
+    row.dataset.lineNumber = String(index + 1)
+    const content = documentRef.createElement('span')
+    content.className = 'code-line-content'
+    content.append(line)
+    row.append(content)
+    fragment.append(row)
+  })
+  return fragment
+}
+
 /**
  * Framework-neutral text/code renderer.
  *
  * highlight.js core and language definitions are loaded lazily by format. HTML
  * and XML are highlighted as escaped source text, never executed as real DOM.
+ * Optional Prettier formatting changes only the displayed string; the original
+ * ArrayBuffer remains the source used by download operations.
  * @param buffer 文本二进制内容
  * @param target 目标
  * @param type 文件扩展名，用于选择 highlight.js 语言
@@ -181,82 +263,243 @@ export default async function renderText(
   type?: string,
   context?: FileRenderContext
 ): Promise<FileViewerRenderedInstance> {
-  const t = createFileViewerTranslator(context?.options)
+  const documentRef = target.ownerDocument
   const extension = type || 'txt'
   const normalizedExtension = extension.trim().toLowerCase()
-  if (
-    normalizedExtension !== 'bundle' &&
+  const initialWrapLongLines = context?.options?.text?.wrapLongLines === true
+  const virtualized = normalizedExtension !== 'bundle' &&
     normalizedExtension !== 'bdl' &&
     shouldVirtualizeTextBuffer(buffer, context)
-  ) {
+
+  const renderVirtualized = async () => {
+    if (context?.options?.text?.wrapLongLinesToggle === true) {
+      return renderFileViewerVirtualTextWithWrapToggle(
+        buffer,
+        target,
+        extension,
+        context
+      )
+    }
+    if (initialWrapLongLines) {
+      const { default: renderWrappedLargeText } = await import('./wrappedLargeText.js')
+      return renderWrappedLargeText(buffer, target, extension, context)
+    }
     return renderLargeText(buffer, target, extension, context)
   }
-  if (normalizedExtension === 'patch') {
-    const { default: renderPatch } = await import('./patch.js')
-    return renderPatch(buffer, target, extension, context)
-  }
+
   if (normalizedExtension === 'bundle' || normalizedExtension === 'bdl') {
     const { default: renderGitBundle } = await import('./gitBundle.js')
     return renderGitBundle(buffer, target, extension, context)
   }
+  if (normalizedExtension === 'patch') {
+    if (virtualized) {
+      return renderVirtualized()
+    }
+    const { default: renderPatch } = await import('./patch.js')
+    return renderPatch(buffer, target, extension, context)
+  }
 
-  const text = decodeFileViewerTextBuffer(buffer, context?.options?.text?.encoding).text
+  const prettyPrintFilename = context?.filename ||
+    `preview.${normalizedExtension || 'txt'}`
+  const prettyPrintEligible = shouldAttemptFileViewerPrettyPrint(
+    buffer.byteLength,
+    normalizedExtension,
+    context,
+    prettyPrintFilename
+  )
+  if (virtualized && !prettyPrintEligible) {
+    return renderVirtualized()
+  }
+
+  const originalText = decodeFileViewerTextBuffer(
+    buffer,
+    context?.options?.text?.encoding
+  ).text
+  const prettyPrintResult = prettyPrintEligible
+    ? await formatFileViewerTextForDisplay({
+        source: originalText,
+        sourceByteLength: buffer.byteLength,
+        extension: normalizedExtension,
+        filename: prettyPrintFilename,
+        context
+      })
+    : { text: originalText, formatted: false as const }
+
+  if (virtualized && !prettyPrintResult.formatted) {
+    return renderVirtualized()
+  }
+
+  const formattedText = prettyPrintResult.text
   const language = resolveLanguage(extension)
-  const lineCount = lineCountOf(text)
   const showToolbar = context?.options?.text?.toolbar !== false
   const showLineNumbers = context?.options?.text?.lineNumbers === true
   let disposed = false
   let zoom = 1
+  let highlightedGeneration = 0
+  let showingFormatted = prettyPrintResult.formatted
+  let wrapLongLines = initialWrapLongLines
+  let currentText = ''
+  let currentHtml = ''
   const zoomEmitter = createZoomChangeEmitter()
-  const root = createElement('div', 'code-viewer')
+  const root = createElement(documentRef, 'div', 'code-viewer')
   root.dataset.viewerZoomProvider = 'code'
   root.dataset.textToolbar = String(showToolbar)
   root.dataset.lineNumbers = String(showLineNumbers)
-  const toolbar = createElement('div', 'code-toolbar')
-  toolbar.append(
-    createElement('span', '', extension.toUpperCase()),
-    createElement('strong', '', `${lineCount} lines`)
-  )
-
-  const pre = createElement('pre', showLineNumbers ? 'code-area code-area--line-numbers' : 'code-area')
-  const code = createElement('code', `hljs language-${language}`)
-  code.innerHTML = language === 'plaintext'
-    ? escapeHtml(text)
-    : t('text.code.loadingHighlight')
-  if (showLineNumbers) {
-    const gutter = createElement('span', 'code-line-numbers', createLineNumberText(lineCount))
-    gutter.setAttribute('aria-hidden', 'true')
-    pre.append(gutter)
+  root.dataset.prettyPrinted = String(prettyPrintResult.formatted)
+  if (prettyPrintResult.parser) {
+    root.dataset.prettyPrintParser = prettyPrintResult.parser
   }
+
+  const toolbar = createElement(documentRef, 'div', 'code-toolbar')
+  const extensionLabel = createElement(documentRef, 'span', '', extension.toUpperCase())
+  const toolbarMeta = createElement(documentRef, 'div', 'code-toolbar-meta')
+  const lineSummary = createElement(documentRef, 'strong')
+  toolbar.append(extensionLabel, toolbarMeta)
+
+  const pre = createElement(documentRef, 'pre', 'code-area')
+  const code = createElement(documentRef, 'code', `hljs language-${language}`)
   pre.append(code)
+
+  const applyRootWrapState = () => {
+    root.classList.toggle('code-viewer--wrap-long-lines', wrapLongLines)
+    root.dataset.wrapLongLines = String(wrapLongLines)
+  }
+
+  const mountCodeHtml = (html: string, text: string) => {
+    const lineCount = lineCountOf(text)
+    lineSummary.textContent = `${lineCount} lines`
+    root.style.setProperty('--code-line-number-width', `${Math.max(5, String(lineCount).length + 2)}ch`)
+    code.className = `hljs language-${language}`
+    pre.replaceChildren()
+
+    if (wrapLongLines && showLineNumbers) {
+      pre.className = 'code-area code-area--wrapped-line-numbers'
+      code.classList.add('code-lines')
+      code.replaceChildren(createHighlightedLineRows(documentRef, html))
+      pre.append(code)
+      return
+    }
+
+    pre.className = wrapLongLines
+      ? 'code-area code-area--wrap-long-lines'
+      : showLineNumbers
+        ? 'code-area code-area--line-numbers'
+        : 'code-area'
+    code.innerHTML = html
+    if (showLineNumbers) {
+      const gutter = createElement(
+        documentRef,
+        'span',
+        'code-line-numbers',
+        createLineNumberText(lineCount)
+      )
+      gutter.setAttribute('aria-hidden', 'true')
+      pre.append(gutter)
+    }
+    pre.append(code)
+  }
+
+  const mountCurrentCode = () => {
+    mountCodeHtml(currentHtml, currentText)
+  }
+
+  const representationToggle = prettyPrintResult.formatted
+    ? createElement(documentRef, 'button', 'code-representation-toggle')
+    : null
+  if (representationToggle) {
+    representationToggle.type = 'button'
+  }
+
+  let wrapToggle: HTMLButtonElement | null = null
+  if (context?.options?.text?.wrapLongLinesToggle === true) {
+    wrapToggle = createFileViewerWrapToggleButton(
+      documentRef,
+      wrapLongLines,
+      context,
+      () => {
+        wrapLongLines = !wrapLongLines
+        applyRootWrapState()
+        if (wrapToggle) {
+          updateFileViewerWrapToggleButton(wrapToggle, wrapLongLines, context)
+        }
+        mountCurrentCode()
+      }
+    )
+  }
+
+  if (representationToggle) {
+    toolbarMeta.append(representationToggle)
+  }
+  if (wrapToggle) {
+    toolbarMeta.append(wrapToggle)
+  }
+  toolbarMeta.append(lineSummary)
+
   if (showToolbar) {
     root.append(toolbar)
+  } else if (representationToggle || wrapToggle) {
+    const floatingControls = createElement(
+      documentRef,
+      'div',
+      'code-representation-floating'
+    )
+    if (representationToggle) {
+      floatingControls.append(representationToggle)
+    }
+    if (wrapToggle) {
+      floatingControls.append(wrapToggle)
+    }
+    root.append(floatingControls)
   }
   root.append(pre)
   root.style.setProperty('--code-font-size', `${13 * zoom}px`)
-  target.replaceChildren(createStyle(), root)
+  applyRootWrapState()
+  target.replaceChildren(createStyle(documentRef), root)
 
-  const updateHighlighted = async () => {
+  const renderRepresentation = () => {
+    const text = showingFormatted ? formattedText : originalText
+    const generation = highlightedGeneration + 1
+    highlightedGeneration = generation
+    root.dataset.representation = showingFormatted ? 'formatted' : 'source'
+    if (representationToggle) {
+      representationToggle.textContent = showingFormatted ? 'Formatted' : 'Source'
+      representationToggle.title = showingFormatted
+        ? 'Show original source'
+        : 'Show formatted representation'
+      representationToggle.setAttribute('aria-label', representationToggle.title)
+      representationToggle.setAttribute('aria-pressed', String(showingFormatted))
+    }
+
+    currentText = text
+    currentHtml = escapeHtml(text)
+    mountCurrentCode()
     if (language === 'plaintext') {
       return
     }
-    try {
-      const hljs = await loadHighlighter()
-      const hasLanguage = await registerLanguageOnce(hljs, language)
-      if (disposed) {
-        return
+
+    void (async () => {
+      try {
+        const hljs = await loadHighlighter()
+        const hasLanguage = await registerLanguageOnce(hljs, language)
+        if (disposed || generation !== highlightedGeneration) {
+          return
+        }
+        currentHtml = hasLanguage
+          ? hljs.highlight(text, { language, ignoreIllegals: true }).value
+          : escapeHtml(text)
+        mountCurrentCode()
+      } catch {
+        // The escaped source is already mounted. Highlighting failures remain
+        // non-fatal and never replace it with executable markup.
       }
-      code.innerHTML = hasLanguage
-        ? hljs.highlight(text, { language, ignoreIllegals: true }).value
-        : escapeHtml(text)
-    } catch {
-      if (!disposed) {
-        code.innerHTML = escapeHtml(text)
-      }
-    }
+    })()
   }
 
-  void updateHighlighted()
+  representationToggle?.addEventListener('click', () => {
+    showingFormatted = !showingFormatted
+    renderRepresentation()
+  })
+  renderRepresentation()
 
   const getZoomState = (): FileViewerZoomState => ({
     scale: zoom,
@@ -288,6 +531,7 @@ export default async function renderText(
     $el: target,
     unmount() {
       disposed = true
+      highlightedGeneration += 1
       unregisterFileViewerZoomProvider(root)
       target.replaceChildren()
     }
