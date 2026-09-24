@@ -1044,6 +1044,309 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
+  packages/presets/full-with-opts-in:
+    dependencies:
+      '@file-viewer/capability-drawio-official':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/drawio-official
+      '@file-viewer/capability-mermaid':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/mermaid
+      '@file-viewer/capability-midi':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/midi
+      '@file-viewer/capability-pdf-identity-repair':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/pdf-identity-repair
+      '@file-viewer/capability-pptx-charts':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/pptx-charts
+      '@file-viewer/capability-rtf':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/rtf
+      '@file-viewer/capability-streaming-media':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/streaming-media
+      '@file-viewer/capability-text-tools':
+        specifier: workspace:3.1.2
+        version: link:../../capabilities/text-tools
+      '@file-viewer/core':
+        specifier: workspace:3.1.2
+        version: link:../../core
+      '@file-viewer/renderer-3d':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/3d
+      '@file-viewer/renderer-archive':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/archive
+      '@file-viewer/renderer-binary':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/binary
+      '@file-viewer/renderer-chm':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/chm
+      '@file-viewer/renderer-data':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/data
+      '@file-viewer/renderer-design':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/design
+      '@file-viewer/renderer-dicom':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/dicom
+      '@file-viewer/renderer-drawing':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/drawing
+      '@file-viewer/renderer-eda':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/eda
+      '@file-viewer/renderer-email':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/email
+      '@file-viewer/renderer-epub':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/ebook
+      '@file-viewer/renderer-geo':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/geo
+      '@file-viewer/renderer-hangul':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/hangul
+      '@file-viewer/renderer-image':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/image
+      '@file-viewer/renderer-iwork':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/iwork
+      '@file-viewer/renderer-media':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/media
+      '@file-viewer/renderer-mindmap':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/mindmap
+      '@file-viewer/renderer-ofd':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/ofd
+      '@file-viewer/renderer-pdf':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/pdf
+      '@file-viewer/renderer-ppt':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/presentation-ppt
+      '@file-viewer/renderer-pptx':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/presentation-pptx
+      '@file-viewer/renderer-presentation':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/presentation
+      '@file-viewer/renderer-signature':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/signature
+      '@file-viewer/renderer-spreadsheet':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/spreadsheet
+      '@file-viewer/renderer-text':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/text
+      '@file-viewer/renderer-typst':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/typst
+      '@file-viewer/renderer-word':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/word
+      '@file-viewer/renderer-wordperfect':
+        specifier: workspace:3.1.2
+        version: link:../../renderers/wordperfect
+      '@file-viewer/assets-standard':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-standard
+      '@file-viewer/assets-typst':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-typst
+      '@file-viewer/assets-model':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-model
+      '@file-viewer/assets-drawing':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-drawing
+      '@file-viewer/assets-iwork':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-iwork
+      '@file-viewer/assets-ppt':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-ppt
+      '@file-viewer/assets-hangul':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-hangul
+      '@file-viewer/assets-wordperfect':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-wordperfect
+      '@file-viewer/assets-chm':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-chm
+      '@file-viewer/assets-data':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-data
+      '@file-viewer/assets-design':
+        specifier: workspace:3.1.2
+        version: link:../../tools/assets-design
+      '@fontsource-variable/noto-sans-sc':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@thatopen/components':
+        specifier: 3.4.8
+        version: 3.4.8(@thatopen/fragments@3.4.7(three@0.186.0)(web-ifc@0.0.77))(camera-controls@3.1.2(three@0.186.0))(three@0.186.0)(web-ifc@0.0.77)
+      '@thatopen/fragments':
+        specifier: 3.4.7
+        version: 3.4.7(three@0.186.0)(web-ifc@0.0.77)
+      bpmn-js:
+        specifier: 18.28.0
+        version: 18.28.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      web-ifc:
+        specifier: 0.0.77
+        version: 0.0.77
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/components/web-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/web':
+        specifier: workspace:3.1.2
+        version: link:../web
+    devDependencies:
+      '@types/node':
+        specifier: ^26.5.1
+        version: 26.6.2
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/components/vue3-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/vue3':
+        specifier: workspace:3.1.2
+        version: link:../vue3
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vue:
+        specifier: ^3.5.42
+        version: 3.5.42(typescript@6.0.3)
+
+  packages/components/vue2.7-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/vue2.7':
+        specifier: workspace:3.1.2
+        version: link:../vue2.7
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vue:
+        specifier: ^2.7.16
+        version: 2.7.16
+
+  packages/components/vue2.6-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/vue2.6':
+        specifier: workspace:3.1.2
+        version: link:../vue2.6
+    devDependencies:
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vue:
+        specifier: ^2.6.14
+        version: 2.6.14
+
+  packages/components/react-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/react':
+        specifier: workspace:3.1.2
+        version: link:../react
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.17
+        version: 19.3.0
+      react:
+        specifier: ^19.2.7
+        version: 19.3.0
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/components/react-legacy-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/react-legacy':
+        specifier: workspace:3.1.2
+        version: link:../react-legacy
+    devDependencies:
+      '@types/react':
+        specifier: ^17.0.0
+        version: 17.0.93
+      react:
+        specifier: ^17.0.2
+        version: 17.0.2
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/components/jquery-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/jquery':
+        specifier: workspace:3.1.2
+        version: link:../jquery
+    devDependencies:
+      '@types/jquery':
+        specifier: ^4.0.1
+        version: 4.0.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
+  packages/components/svelte-full-with-opts-in:
+    dependencies:
+      '@file-viewer/preset-full-with-opts-in':
+        specifier: workspace:3.1.2
+        version: link:../../presets/full-with-opts-in
+      '@file-viewer/svelte':
+        specifier: workspace:3.1.2
+        version: link:../svelte
+    devDependencies:
+      svelte:
+        specifier: ^5.57.0
+        version: 5.57.1
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+
   packages/presets/all:
     dependencies:
       '@file-viewer/capability-drawio-official':

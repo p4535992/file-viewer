@@ -1,0 +1,45 @@
+{
+  "name": "@file-viewer/web-full-with-opts-in",
+  "version": "3.1.2",
+  "private": false,
+  "type": "module",
+  "description": "web File Viewer full-with-opts-in package: all supported opt-ins enabled, AGPL CAD runtime excluded.",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flyfish-dev/file-viewer.git",
+    "directory": "packages/components/web-full-with-opts-in"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.en.md"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "type-check": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@file-viewer/preset-full-with-opts-in": "workspace:3.1.2",
+    "@file-viewer/web": "workspace:3.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.1",
+    "typescript": "^6.0.3"
+  },
+  "license": "Apache-2.0"
+}

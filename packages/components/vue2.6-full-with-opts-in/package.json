@@ -1,0 +1,48 @@
+{
+  "name": "@file-viewer/vue2.6-full-with-opts-in",
+  "version": "3.1.2",
+  "private": false,
+  "type": "module",
+  "description": "vue2.6 File Viewer full-with-opts-in package: all supported opt-ins enabled, AGPL CAD runtime excluded.",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flyfish-dev/file-viewer.git",
+    "directory": "packages/components/vue2.6-full-with-opts-in"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "README.en.md"
+  ],
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "type-check": "tsc -b tsconfig.json"
+  },
+  "dependencies": {
+    "@file-viewer/preset-full-with-opts-in": "workspace:3.1.2",
+    "@file-viewer/vue2.6": "workspace:3.1.2"
+  },
+  "peerDependencies": {
+    "vue": ">=2.6 <2.7"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vue": "^2.6.14"
+  },
+  "license": "Apache-2.0"
+}
