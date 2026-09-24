@@ -873,6 +873,21 @@
         "types"
       ],
       "publicSource": true
+    },
+    {
+      "id": "full-with-opts-in",
+      "packageName": "@file-viewer/preset-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Full preset with all supported opt-ins enabled while excluding the AGPL-only CAD/DWG/DWF/DWFX runtime chain.",
+      "packageDir": "packages/presets/full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "publicSource": true
     }
   ],
   "compatibilityPackages": [
@@ -1245,6 +1260,151 @@
       "repository": "file-viewer-svelte-full",
       "github": "https://github.com/flyfish-dev/file-viewer-svelte-full",
       "gitee": "https://gitee.com/flyfish-dev/file-viewer-svelte-full",
+      "entryFormats": [
+        "svelte-component",
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/svelte"
+    },
+    {
+      "id": "web-full-with-opts-in",
+      "framework": "Vanilla JS / Pure Web Full With Opt-ins",
+      "packageName": "@file-viewer/web-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Vanilla JS / Pure Web Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/web-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/web"
+    },
+    {
+      "id": "vue3-full-with-opts-in",
+      "framework": "Vue 3 Full With Opt-ins",
+      "packageName": "@file-viewer/vue3-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Vue 3 Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/vue3-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/vue3"
+    },
+    {
+      "id": "vue2.7-full-with-opts-in",
+      "framework": "Vue 2.7 Full With Opt-ins",
+      "packageName": "@file-viewer/vue2.7-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Vue 2.7 Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/vue2.7-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/vue2.7"
+    },
+    {
+      "id": "vue2.6-full-with-opts-in",
+      "framework": "Vue 2.6 Full With Opt-ins",
+      "packageName": "@file-viewer/vue2.6-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Vue 2.6 Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/vue2.6-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/vue2.6"
+    },
+    {
+      "id": "react-full-with-opts-in",
+      "framework": "React 18/19 Full With Opt-ins",
+      "packageName": "@file-viewer/react-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "React 18/19 Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/react-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/react"
+    },
+    {
+      "id": "react-legacy-full-with-opts-in",
+      "framework": "React 16.8/17 Full With Opt-ins",
+      "packageName": "@file-viewer/react-legacy-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "React 16.8/17 Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/react-legacy-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/react-legacy"
+    },
+    {
+      "id": "jquery-full-with-opts-in",
+      "framework": "jQuery Full With Opt-ins",
+      "packageName": "@file-viewer/jquery-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "jQuery Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/jquery-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
+      "entryFormats": [
+        "esm",
+        "types"
+      ],
+      "historicalPackages": [],
+      "flavor": "full",
+      "basePackage": "@file-viewer/jquery"
+    },
+    {
+      "id": "svelte-full-with-opts-in",
+      "framework": "Svelte Full With Opt-ins",
+      "packageName": "@file-viewer/svelte-full-with-opts-in",
+      "releaseVersion": "3.1.2",
+      "description": "Svelte Full additive full-with-opts-in package with BPMN, DICOM, signature/evidence, enhanced IFC, Adobe/design and binary inspector enabled; AGPL CAD runtime excluded.",
+      "packageDir": "packages/components/svelte-full-with-opts-in",
+      "repository": "file-viewer",
+      "github": "https://github.com/flyfish-dev/file-viewer",
+      "gitee": "https://gitee.com/flyfish-dev/file-viewer",
       "entryFormats": [
         "svelte-component",
         "esm",
