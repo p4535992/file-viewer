@@ -1,0 +1,230 @@
+name: Build full-with-opts-in release
+
+run-name: full-with-opts-in from ${{ github.ref_name }} (${{ github.run_number }})
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-with-opts-in-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build, verify and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.0.9
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify the release dependency closure excludes AGPL CAD
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync } from 'node:fs'
+          import { join } from 'node:path'
+
+          const forbidden = new Set([
+            '@file-viewer/renderer-cad',
+            '@file-viewer/assets-cad',
+            '@flyfish-dev/cad-viewer',
+            'dwf-viewer'
+          ])
+
+          const roots = ['packages']
+          const packageByName = new Map()
+
+          for (const root of roots) {
+            for (const path of readdirSync(root, { recursive: true, withFileTypes: false })) {
+              if (!String(path).endsWith('package.json')) continue
+              const file = join(root, String(path))
+              try {
+                const pkg = JSON.parse(readFileSync(file, 'utf8'))
+                if (pkg.name) packageByName.set(pkg.name, { file, pkg })
+              } catch {}
+            }
+          }
+
+          const entry = '@file-viewer/preset-full-with-opts-in'
+          const seen = new Set()
+          const stack = [entry]
+          const violations = []
+
+          while (stack.length) {
+            const name = stack.pop()
+            if (!name || seen.has(name)) continue
+            seen.add(name)
+            if (forbidden.has(name)) violations.push(name)
+
+            const record = packageByName.get(name)
+            if (!record) continue
+            const deps = {
+              ...(record.pkg.dependencies || {}),
+              ...(record.pkg.optionalDependencies || {}),
+              ...(record.pkg.peerDependencies || {})
+            }
+            for (const dep of Object.keys(deps)) {
+              if (forbidden.has(dep)) violations.push(`${name} -> ${dep}`)
+              if (packageByName.has(dep)) stack.push(dep)
+            }
+          }
+
+          if (violations.length) {
+            console.error('Forbidden CAD dependency found in full-with-opts-in closure:')
+            for (const violation of [...new Set(violations)]) console.error(`- ${violation}`)
+            process.exit(1)
+          }
+
+          console.log(`Verified ${seen.size} workspace packages: no AGPL CAD runtime dependency in the full-with-opts-in closure.`)
+          NODE
+
+      - name: Set up Rust WASM toolchain
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli --version 0.2.127 --locked
+
+      - name: Set up pinned Binaryen WASM optimizer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tool_dir="$RUNNER_TEMP/file-viewer-binaryen"
+          archive="$tool_dir/binaryen-version_132-node.tar.gz"
+          mkdir -p "$tool_dir"
+          gh release download version_132 \
+            --repo WebAssembly/binaryen \
+            --pattern binaryen-version_132-node.tar.gz \
+            --dir "$tool_dir"
+          printf '%s  %s\n' \
+            'f2f49e583f5eafbe2af5da8470177d4d10aedf149752f5dd97736f54eba6f6a2' \
+            "$archive" | sha256sum --check --status
+          tar -xzf "$archive" -C "$tool_dir"
+          printf '%s\n' '#!/usr/bin/env bash' \
+            "exec node '$tool_dir/binaryen-version_132/wasm-opt.js' \"\$@\"" \
+            > "$tool_dir/wasm-opt"
+          chmod +x "$tool_dir/wasm-opt"
+          "$tool_dir/wasm-opt" --version
+          echo "$tool_dir" >> "$GITHUB_PATH"
+
+      - name: Build full-with-opts-in dependency closure
+        run: pnpm --filter @file-viewer/preset-full-with-opts-in... build
+
+      - name: Build full-with-opts-in wrappers
+        run: pnpm --filter './packages/components/*-full-with-opts-in' build
+
+      - name: Type-check new release line
+        run: |
+          pnpm --filter @file-viewer/preset-full-with-opts-in type-check
+          pnpm --filter './packages/components/*-full-with-opts-in' type-check
+
+      - name: Verify specialist opt-ins
+        run: |
+          pnpm verify:dicom-license-ledger
+          pnpm --filter @file-viewer/renderer-3d verify:ifc
+          pnpm --filter @file-viewer/renderer-signature verify:licenses
+
+      - name: Pack release tarballs
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          mkdir -p "$OUT_DIR"
+          packages=(
+            '@file-viewer/preset-full-with-opts-in'
+            '@file-viewer/web-full-with-opts-in'
+            '@file-viewer/vue3-full-with-opts-in'
+            '@file-viewer/vue2.7-full-with-opts-in'
+            '@file-viewer/vue2.6-full-with-opts-in'
+            '@file-viewer/react-full-with-opts-in'
+            '@file-viewer/react-legacy-full-with-opts-in'
+            '@file-viewer/jquery-full-with-opts-in'
+            '@file-viewer/svelte-full-with-opts-in'
+          )
+          for package in "${packages[@]}"; do
+            pnpm --filter "$package" pack --pack-destination "$OUT_DIR"
+          done
+
+      - name: Generate manifest and checksums
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { readFile, readdir, writeFile } from 'node:fs/promises'
+          import { basename, join } from 'node:path'
+
+          const root = process.env.OUT_DIR
+          const files = (await readdir(root)).filter(name => name.endsWith('.tgz')).sort()
+          if (files.length !== 9) {
+            throw new Error(`Expected 9 tarballs, found ${files.length}`)
+          }
+
+          const artifacts = []
+          const sums = []
+          for (const name of files) {
+            const bytes = await readFile(join(root, name))
+            const sha256 = createHash('sha256').update(bytes).digest('hex')
+            artifacts.push({ name, bytes: bytes.length, sha256 })
+            sums.push(`${sha256}  ${name}`)
+          }
+
+          const manifest = {
+            schemaVersion: 1,
+            releaseLine: 'full-with-opts-in',
+            sourceRepository: process.env.GITHUB_REPOSITORY,
+            sourceRef: process.env.GITHUB_REF,
+            sourceSha: process.env.GITHUB_SHA,
+            generatedAt: new Date().toISOString(),
+            cadRuntimePolicy: {
+              excluded: true,
+              forbiddenPackages: [
+                '@file-viewer/renderer-cad',
+                '@file-viewer/assets-cad',
+                '@flyfish-dev/cad-viewer',
+                'dwf-viewer'
+              ]
+            },
+            artifacts
+          }
+
+          await writeFile(
+            join(root, 'full-with-opts-in-manifest.json'),
+            JSON.stringify(manifest, null, 2) + '\n'
+          )
+          await writeFile(join(root, 'SHA256SUMS.txt'), sums.join('\n') + '\n')
+          console.log(`Packed ${artifacts.length} full-with-opts-in packages.`)
+          NODE
+
+      - name: Show packaged files
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          ls -lah "$OUT_DIR"
+          cat "$OUT_DIR/SHA256SUMS.txt"
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-with-opts-in-${{ github.sha }}
+          path: ${{ runner.temp }}/full-with-opts-in-release
+          if-no-files-found: error
+          retention-days: 30
