@@ -149,6 +149,17 @@ jobs:
       - name: Build full-with-opts-in dependency closure
         run: pnpm --filter @file-viewer/preset-full-with-opts-in... build
 
+      - name: Build base framework components for opt-in wrappers
+        run: |
+          pnpm --filter @file-viewer/web \
+            --filter @file-viewer/vue3 \
+            --filter @file-viewer/vue2.7 \
+            --filter @file-viewer/vue2.6 \
+            --filter @file-viewer/react \
+            --filter @file-viewer/react-legacy \
+            --filter @file-viewer/jquery \
+            --filter @file-viewer/svelte build
+
       - name: Build full-with-opts-in wrappers
         run: pnpm --filter './packages/components/*-full-with-opts-in' build
 
