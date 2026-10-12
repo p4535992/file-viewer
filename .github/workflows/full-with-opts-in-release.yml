@@ -42,8 +42,17 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      # The source lockfile predates jquery peer metadata in the opt-in wrapper.
+      # Resolve it in the runner, and publish the resulting lockfile for replay.
+      - name: Install dependencies and resolve workspace lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Save resolved lockfile in release bundle
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          mkdir -p "$OUT_DIR"
+          cp pnpm-lock.yaml "$OUT_DIR/resolved-pnpm-lock.yaml"
 
       - name: Verify the release dependency closure excludes AGPL CAD
         run: |
@@ -193,8 +202,14 @@ jobs:
             sums.push(`${sha256}  ${name}`)
           }
 
+          const lockfileName = 'resolved-pnpm-lock.yaml'
+          const lockfileBytes = await readFile(join(root, lockfileName))
+          const lockfileSha256 = createHash('sha256').update(lockfileBytes).digest('hex')
+          sums.push(`${lockfileSha256}  ${lockfileName}`)
+
           const manifest = {
             schemaVersion: 1,
+            resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
             sourceRepository: process.env.GITHUB_REPOSITORY,
             sourceRef: process.env.GITHUB_REF,
@@ -258,6 +273,7 @@ jobs:
             --dir "$RELEASE_DIR"
           test "$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 9
           test -s "$RELEASE_DIR/full-with-opts-in-manifest.json"
+          test -s "$RELEASE_DIR/resolved-pnpm-lock.yaml"
           test -s "$RELEASE_DIR/SHA256SUMS.txt"
           (cd "$RELEASE_DIR" && sha256sum --check SHA256SUMS.txt)
 
@@ -286,8 +302,9 @@ jobs:
           binary inspector, and the other explicitly opted-in capabilities.
           The AGPL-only CAD/DWG/DWF/DWFX runtime is intentionally excluded.
 
-          SHA256SUMS.txt provides tarball hashes; full-with-opts-in-manifest.json
-          records the source commit and the complete artifact list.
+          SHA256SUMS.txt provides tarball and resolved-lockfile hashes.
+          full-with-opts-in-manifest.json records the source commit and package list.
+          resolved-pnpm-lock.yaml records the dependency resolution used by this build.
 
           This is a GitHub prerelease with build artifacts, not an npm publication.
           EOF
@@ -296,6 +313,7 @@ jobs:
             "$RELEASE_DIR"/*.tgz \
             "$RELEASE_DIR"/full-with-opts-in-manifest.json \
             "$RELEASE_DIR"/SHA256SUMS.txt \
+            "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "File Viewer v3.1.2 — full-with-opts-in" \
