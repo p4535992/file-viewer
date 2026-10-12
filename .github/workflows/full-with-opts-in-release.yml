@@ -235,7 +235,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-release:
+  release:
     name: Publish full-with-opts-in GitHub prerelease
     needs: build
     if: github.ref == 'refs/heads/build/web-full-with-opts-in'
