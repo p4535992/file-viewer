@@ -160,6 +160,18 @@ jobs:
             --filter @file-viewer/jquery \
             --filter @file-viewer/svelte build
 
+      - name: Enable jQuery ambient types for opt-in wrapper (runner only)
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const path = 'packages/components/jquery-full-with-opts-in/tsconfig.json'
+          const config = JSON.parse(readFileSync(path, 'utf8'))
+          config.compilerOptions.types = [
+            ...new Set([...(config.compilerOptions.types || []), 'jquery'])
+          ]
+          writeFileSync(path, JSON.stringify(config, null, 2) + '\n')
+          NODE
+
       - name: Build full-with-opts-in wrappers
         run: pnpm --filter './packages/components/*-full-with-opts-in' build
 
