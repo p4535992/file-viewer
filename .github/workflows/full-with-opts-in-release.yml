@@ -141,6 +141,11 @@ jobs:
           "$tool_dir/wasm-opt" --version
           echo "$tool_dir" >> "$GITHUB_PATH"
 
+      - name: Prepare core and staged assets for standard dependency build
+        run: |
+          pnpm --filter @file-viewer/core build
+          pnpm --filter file-viewer-copy-assets stage-assets
+
       - name: Build full-with-opts-in dependency closure
         run: pnpm --filter @file-viewer/preset-full-with-opts-in... build
 
