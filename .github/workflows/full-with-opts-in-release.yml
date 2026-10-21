@@ -151,6 +151,11 @@ jobs:
           pnpm --filter @file-viewer/core build
           pnpm --filter @file-viewer/renderer-iwork --filter @file-viewer/renderer-hangul --filter @file-viewer/renderer-spreadsheet build
           pnpm --filter @file-viewer/geometry-engine build
+          # Flyfish's immutable runtime attribution requires generated original
+          # PDF.js grants and specialist Worker payloads before asset staging.
+          pnpm --filter @file-viewer/renderer-pdf... build
+          pnpm --filter @file-viewer/renderer-design... build
+          pnpm --filter @file-viewer/renderer-chm... build
 
       - name: Stage runtime assets for the standard pack
         run: pnpm --filter file-viewer-copy-assets stage-assets
