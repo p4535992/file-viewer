@@ -3,7 +3,7 @@ name: Build full-with-opts-in release
 run-name: full-with-opts-in v3.2.2 from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
-  # Trigger only when this branch-specific release workflow changes.
+  # Trigger a v3.2.2 full opt-in packaging/release verification on branch updates.
   push:
     branches:
       - build/web-full-with-opts-in
