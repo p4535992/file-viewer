@@ -231,6 +231,7 @@ jobs:
             pnpm --filter "@file-viewer/assets-$capability" stage-assets
           done
 
+      # Resolve deployed pnpm modules through their nested production closure.
       - name: Assemble and verify full offline distribution
         env:
           OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release

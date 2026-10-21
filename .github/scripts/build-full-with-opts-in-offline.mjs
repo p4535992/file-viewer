@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, join, resolve } from 'node:path'
 
@@ -44,20 +45,28 @@ run('pnpm', ['--filter', '@file-viewer/web-full-with-opts-in', 'deploy',
 const web = JSON.parse(await readFile(join(stage, 'web/package.json'), 'utf8'))
 assert.equal(web.name, '@file-viewer/web-full-with-opts-in')
 assert.equal(web.version, version)
-for (const relative of [
-  'web/dist/index.js',
-  'web/node_modules/@file-viewer/core/package.json',
-  'web/node_modules/@file-viewer/preset-full-with-opts-in/package.json',
-  'web/node_modules/@file-viewer/renderer-dicom/package.json',
-  'web/node_modules/@file-viewer/renderer-signature/package.json',
-  'web/node_modules/@file-viewer/renderer-design/package.json',
-  'web/node_modules/@file-viewer/renderer-binary/package.json',
-  'web/node_modules/@file-viewer/renderer-3d/package.json'
-]) file(join(stage, relative))
-for (const forbidden of [
-  'web/node_modules/@file-viewer/renderer-cad',
-  'web/node_modules/@file-viewer/assets-cad'
-]) assert.equal(existsSync(join(stage, forbidden)), false, 'Forbidden CAD dependency: ' + forbidden)
+file(join(stage, 'web/dist/index.js'))
+// pnpm's deployed production graph is nested under .pnpm and may be linked
+// from the preset package, not hoisted to the direct web node_modules root.
+const webRequire = createRequire(join(stage, 'web/package.json'))
+const presetPath = webRequire.resolve('@file-viewer/preset-full-with-opts-in/package.json')
+assert.ok(presetPath.startsWith(stage + '/'), 'Preset resolves outside offline bundle')
+file(presetPath)
+const presetRequire = createRequire(presetPath)
+for (const name of [
+  '@file-viewer/core', '@file-viewer/renderer-dicom',
+  '@file-viewer/renderer-signature', '@file-viewer/renderer-design',
+  '@file-viewer/renderer-binary', '@file-viewer/renderer-3d'
+]) {
+  const manifestPath = presetRequire.resolve(name + '/package.json')
+  assert.ok(manifestPath.startsWith(stage + '/'), 'Dependency resolves outside bundle: ' + name)
+  file(manifestPath)
+}
+const virtualStore = join(stage, 'web/node_modules/.pnpm')
+const entries = await readdir(virtualStore)
+for (const forbidden of ['@file-viewer+renderer-cad@', '@file-viewer+assets-cad@']) {
+  assert.ok(!entries.some(name => name.includes(forbidden)), 'Forbidden AGPL package: ' + forbidden)
+}
 // Use the project's installers, not its unfiltered upstream CAD-enabled demo.
 run(process.execPath, [
   'packages/presets/full-with-opts-in/bin/copy-assets.mjs',
