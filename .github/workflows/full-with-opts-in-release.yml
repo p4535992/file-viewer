@@ -3,7 +3,7 @@ name: Build full-with-opts-in release
 run-name: full-with-opts-in v3.2.2 from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
-  # Trigger a v3.2.2 full opt-in packaging/release verification on branch updates.
+  # Trigger the v3.2.2 offline bundle build after asset-pack attribution fixes.
   push:
     branches:
       - build/web-full-with-opts-in
