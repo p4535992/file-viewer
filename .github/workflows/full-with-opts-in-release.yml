@@ -143,6 +143,7 @@ jobs:
 
       # Upstream 3.2.2 retained-license staging validates generated Workers.
       # Its standard asset pack also requires the staged manifest before it builds.
+      # Require the v3.2.2-pinned IFC peer engine cohort in the preset.
       # Prebuild the three notice-bearing Workers AND the OCCT geometry bundle.
       # The upstream 3.2.2 asset stager verifies OCCT's generated LGPL notice
       # before copying assets; a source-only checkout lacks that notice.
