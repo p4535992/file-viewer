@@ -143,12 +143,14 @@ jobs:
 
       # Upstream 3.2.2 retained-license staging validates generated Workers.
       # Its standard asset pack also requires the staged manifest before it builds.
-      # Prebuild the three notice-bearing Workers, stage the assets, then build
-      # the full preset dependency graph (including assets-standard).
+      # Prebuild the three notice-bearing Workers AND the OCCT geometry bundle.
+      # The upstream 3.2.2 asset stager verifies OCCT's generated LGPL notice
+      # before copying assets; a source-only checkout lacks that notice.
       - name: Build core and license-verified Worker prerequisites
         run: |
           pnpm --filter @file-viewer/core build
           pnpm --filter @file-viewer/renderer-iwork --filter @file-viewer/renderer-hangul --filter @file-viewer/renderer-spreadsheet build
+          pnpm --filter @file-viewer/geometry-engine build
 
       - name: Stage runtime assets for the standard pack
         run: pnpm --filter file-viewer-copy-assets stage-assets
@@ -213,39 +215,65 @@ jobs:
             pnpm --filter "$package" pack --pack-destination "$OUT_DIR"
           done
 
+      # The upstream distribution is compiled packages PLUS version-matched
+      # Worker/WASM/font/vendor asset packs. Stage specialist packs before using
+      # the preset's own transactional asset installers.
+      - name: Stage optional offline asset packs
+        run: |
+          for capability in typst model drawing iwork ppt hangul wordperfect chm data design; do
+            pnpm --filter "@file-viewer/assets-$capability" stage-assets
+          done
+
+      - name: Assemble and verify full offline distribution
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: node .github/scripts/build-full-with-opts-in-offline.mjs
+
       - name: Generate manifest and checksums
         env:
           OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
         run: |
           node --input-type=module <<'NODE'
           import { createHash } from 'node:crypto'
-          import { readFile, readdir, writeFile } from 'node:fs/promises'
+          import { readdir, writeFile } from 'node:fs/promises'
+          import { createReadStream } from 'node:fs'
           import { basename, join } from 'node:path'
 
           const root = process.env.OUT_DIR
-          const files = (await readdir(root)).filter(name => name.endsWith('.tgz')).sort()
-          if (files.length !== 9) {
-            throw new Error(`Expected 9 tarballs, found ${files.length}`)
+          const names = await readdir(root)
+          const tarballs = names.filter(name => name.endsWith('.tgz'))
+          const offline = names.filter(name => name.endsWith('-offline.tar.gz'))
+          if (tarballs.length !== 9 || offline.length !== 1) {
+            throw new Error(`Expected 9 npm packages + 1 offline archive, found ${tarballs.length} and ${offline.length}`)
           }
+          const files = [...tarballs, ...offline].sort()
 
           const artifacts = []
           const sums = []
+          async function digest(path) {
+            const hash = createHash('sha256')
+            let size = 0
+            for await (const chunk of createReadStream(path)) {
+              hash.update(chunk)
+              size += chunk.length
+            }
+            return { sha256: hash.digest('hex'), bytes: size }
+          }
           for (const name of files) {
-            const bytes = await readFile(join(root, name))
-            const sha256 = createHash('sha256').update(bytes).digest('hex')
-            artifacts.push({ name, bytes: bytes.length, sha256 })
+            const { sha256, bytes } = await digest(join(root, name))
+            artifacts.push({ name, bytes, sha256 })
             sums.push(`${sha256}  ${name}`)
           }
 
           const lockfileName = 'resolved-pnpm-lock.yaml'
-          const lockfileBytes = await readFile(join(root, lockfileName))
-          const lockfileSha256 = createHash('sha256').update(lockfileBytes).digest('hex')
+          const { sha256: lockfileSha256 } = await digest(join(root, lockfileName))
           sums.push(`${lockfileSha256}  ${lockfileName}`)
 
           const manifest = {
             schemaVersion: 1,
             resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
+            offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 optional asset packs', '9 wrapper tarballs'] },
             upstreamReleaseTag: 'v3.2.2',
             upstreamRepository: 'flyfish-dev/file-viewer',
             sourceRepository: process.env.GITHUB_REPOSITORY,
@@ -269,7 +297,7 @@ jobs:
             JSON.stringify(manifest, null, 2) + '\n'
           )
           await writeFile(join(root, 'SHA256SUMS.txt'), sums.join('\n') + '\n')
-          console.log(`Packed ${artifacts.length} full-with-opts-in packages.`)
+          console.log(`Verified ${tarballs.length} npm tarballs and ${offline.length} complete offline archive.`)
           NODE
 
       - name: Show packaged files
@@ -309,6 +337,8 @@ jobs:
             --name "full-with-opts-in-$GITHUB_SHA" \
             --dir "$RELEASE_DIR"
           test "$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 9
+          test "$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*-offline.tar.gz' | wc -l)" -eq 1
+          test "$(stat -c '%s' "$RELEASE_DIR"/*-offline.tar.gz)" -gt 15000000
           test -s "$RELEASE_DIR/full-with-opts-in-manifest.json"
           test -s "$RELEASE_DIR/resolved-pnpm-lock.yaml"
           test -s "$RELEASE_DIR/SHA256SUMS.txt"
@@ -332,8 +362,14 @@ jobs:
           Built from branch build/web-full-with-opts-in at commit $GITHUB_SHA.
           The default branch is not modified.
 
-          Contains nine package tarballs: the full-with-opts-in preset, Web,
+          Contains nine npm package tarballs: the full-with-opts-in preset, Web,
           Vue 3, Vue 2.7, Vue 2.6, React, React Legacy, jQuery, and Svelte.
+          These individual npm tarballs are dependency-aware, not standalone.
+
+          The separate full-with-opts-in-offline.tar.gz contains the precompiled
+          Web production dependency closure, all allowed optional runtime asset
+          packs, same-version local Workers/WASM/fonts/vendor files and the nine
+          wrapper tarballs. Refer to its README.md for installation and scope.
 
           Opt-ins: BPMN, DICOM, signatures/evidence, enhanced IFC, Adobe/design,
           binary inspector, and the other explicitly opted-in capabilities.
@@ -348,6 +384,7 @@ jobs:
 
           gh release create "$RELEASE_TAG" \
             "$RELEASE_DIR"/*.tgz \
+            "$RELEASE_DIR"/*-offline.tar.gz \
             "$RELEASE_DIR"/full-with-opts-in-manifest.json \
             "$RELEASE_DIR"/SHA256SUMS.txt \
             "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
