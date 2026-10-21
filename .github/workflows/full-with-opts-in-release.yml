@@ -141,16 +141,20 @@ jobs:
           "$tool_dir/wasm-opt" --version
           echo "$tool_dir" >> "$GITHUB_PATH"
 
-      # Upstream 3.2.2 generates IWork/Hangul/Spreadsheet Workers during
-      # renderer builds. Retained-license staging compares their built bytes.
-      # Build the dependency closure before staging those runtime assets.
-      - name: Build core and full-with-opts-in dependency closure
+      # Upstream 3.2.2 retained-license staging validates generated Workers.
+      # Its standard asset pack also requires the staged manifest before it builds.
+      # Prebuild the three notice-bearing Workers, stage the assets, then build
+      # the full preset dependency graph (including assets-standard).
+      - name: Build core and license-verified Worker prerequisites
         run: |
           pnpm --filter @file-viewer/core build
-          pnpm --filter @file-viewer/preset-full-with-opts-in... build
+          pnpm --filter @file-viewer/renderer-iwork --filter @file-viewer/renderer-hangul --filter @file-viewer/renderer-spreadsheet build
 
-      - name: Stage runtime assets after renderer Worker builds
+      - name: Stage runtime assets for the standard pack
         run: pnpm --filter file-viewer-copy-assets stage-assets
+
+      - name: Build full-with-opts-in dependency closure
+        run: pnpm --filter @file-viewer/preset-full-with-opts-in... build
 
       - name: Build base framework components for opt-in wrappers
         run: |
