@@ -27,11 +27,13 @@ import { mediaRenderer } from '@file-viewer/renderer-media';
 import { mindmapRenderer } from '@file-viewer/renderer-mindmap';
 import { modelRenderer } from '@file-viewer/renderer-3d';
 import { ifcRenderer } from '@file-viewer/renderer-3d/ifc';
+import { geo3dRenderer } from '@file-viewer/renderer-3d/geo3d';
 import { ofdRenderer } from '@file-viewer/renderer-ofd';
 import { pdfRenderer } from '@file-viewer/renderer-pdf';
 import { presentationRenderer } from '@file-viewer/renderer-presentation';
 import { spreadsheetRenderer } from '@file-viewer/renderer-spreadsheet';
 import { textRenderer } from '@file-viewer/renderer-text';
+import { enableFileViewerXmlProfiles } from '@file-viewer/renderer-text/xml-profiles';
 import { typstRenderer } from '@file-viewer/renderer-typst';
 import { wordRenderer } from '@file-viewer/renderer-word';
 import { wordPerfectRenderer } from '@file-viewer/renderer-wordperfect';
@@ -75,8 +77,12 @@ export const fileViewerAllRendererPlugin: FileViewerRendererPlugin<BrowserRender
 export const allRenderers: FileViewerRendererPreset<BrowserRendererHandler> = {
   id: 'file-viewer-preset-full-with-opts-in',
   label: 'Flyfish File Viewer full-with-opts-in renderer preset',
-  renderers: [wordRenderer, wordPerfectRenderer, hangulRenderer, iworkRenderer, pdfRenderer, ofdRenderer, presentationRenderer, spreadsheetRenderer, typstRenderer, drawingRenderer, bpmnRenderer, modelRenderer, ifcRenderer, archiveRenderer, chmRenderer, emailRenderer, ebookRenderer, textRenderer, imageRenderer, mediaRenderer, mindmapRenderer, geoRenderer, dataRenderer, designRenderer, edaRenderer, binaryRenderer, dicomRenderer, signatureRenderer, fileViewerAllRendererPlugin],
+  renderers: [wordRenderer, wordPerfectRenderer, hangulRenderer, iworkRenderer, pdfRenderer, ofdRenderer, presentationRenderer, spreadsheetRenderer, typstRenderer, drawingRenderer, bpmnRenderer, modelRenderer, ifcRenderer, geo3dRenderer, archiveRenderer, chmRenderer, emailRenderer, ebookRenderer, textRenderer, imageRenderer, mediaRenderer, mindmapRenderer, geoRenderer, dataRenderer, designRenderer, edaRenderer, binaryRenderer, dicomRenderer, signatureRenderer, fileViewerAllRendererPlugin],
 };
+
+// Enable the upstream lazy, same-origin libxml2/libxslt XSD/XSLT profile renderer.
+// The host supplies XML profiles with options.xml; no remote resources are fetched.
+enableFileViewerXmlProfiles();
 
 export const fullWithOptsInRenderers = allRenderers;
 export const fileViewerPresetFullWithOptsIn = allRenderers;

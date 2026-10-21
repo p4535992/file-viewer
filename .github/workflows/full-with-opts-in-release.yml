@@ -1,9 +1,9 @@
 name: Build full-with-opts-in release
 
-run-name: full-with-opts-in v3.2.2 from ${{ github.ref_name }} (${{ github.run_number }})
+run-name: full-with-opts-in v3.2.2-r2 Geo3D+XML from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
-  # Trigger the v3.2.2 offline bundle build after asset-pack attribution fixes.
+  # Build the complete v3.2.2-r2 opt-in offline distribution (including Geo3D and XML).
   push:
     branches:
       - build/web-full-with-opts-in
@@ -202,6 +202,17 @@ jobs:
           pnpm --filter @file-viewer/renderer-3d verify:ifc
           pnpm --filter @file-viewer/renderer-signature verify:licenses
 
+      # Exercise Flyfish's own Geo3D contracts and the real Chromium XSD/XSLT
+      # browser fixture; this guards against missing optional peers and loaders.
+      - name: Verify Geo3D point cloud and 3TZ opt-in
+        run: pnpm --filter @file-viewer/renderer-3d verify:geo3d
+
+      - name: Install Chromium for real XML XSD/XSLT fixture
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify XML XSD/XSLT profile rendering in Chromium
+        run: pnpm --filter @file-viewer/renderer-text test:xml-profiles:browser
+
       - name: Pack release tarballs
         env:
           OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
@@ -281,7 +292,7 @@ jobs:
             schemaVersion: 1,
             resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
-            offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 optional asset packs', '9 wrapper tarballs'] },
+            offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 Flyfish optional asset packs', 'Geo3D LAS/LAZ/3TZ/COG local decoders and workers', 'XML XSD/XSLT local WASM engines', '9 wrapper tarballs'] },
             upstreamReleaseTag: 'v3.2.2',
             upstreamRepository: 'flyfish-dev/file-viewer',
             sourceRepository: process.env.GITHUB_REPOSITORY,
@@ -356,7 +367,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
-          RELEASE_TAG: v3.2.2-full-with-opts-in
+          RELEASE_TAG: v3.2.2-full-with-opts-in-r2
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::Release $RELEASE_TAG already exists; refusing to overwrite it."
@@ -365,7 +376,7 @@ jobs:
 
           notes="$RUNNER_TEMP/full-with-opts-in-release-notes.md"
           cat > "$notes" <<EOF
-          ## File Viewer v3.2.2 — full-with-opts-in
+          ## File Viewer v3.2.2 — full-with-opts-in (complete Geo3D + XML)
 
           Built from branch build/web-full-with-opts-in at commit $GITHUB_SHA.
           The default branch is not modified.
@@ -376,11 +387,12 @@ jobs:
 
           The separate full-with-opts-in-offline.tar.gz contains the precompiled
           Web production dependency closure, all allowed optional runtime asset
-          packs, same-version local Workers/WASM/fonts/vendor files and the nine
-          wrapper tarballs. Refer to its README.md for installation and scope.
+          packs, same-version local Workers/WASM/fonts/vendor files, self-hosted
+          Geo3D LAS/LAZ/COPC/GeoTIFF/COG/CityJSON/3D Tiles/3TZ decoders, XML
+          XSD/XSLT WASM engines, and the nine wrapper tarballs. Refer to its README.md for installation and scope.
 
           Opt-ins: BPMN, DICOM, signatures/evidence, enhanced IFC, Adobe/design,
-          binary inspector, and the other explicitly opted-in capabilities.
+          binary inspector, XML profiles, Geo3D and the other explicitly opted-in capabilities.
           The AGPL-only CAD/DWG/DWF/DWFX runtime is intentionally excluded.
 
           SHA256SUMS.txt provides tarball and resolved-lockfile hashes.
@@ -398,7 +410,7 @@ jobs:
             "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "File Viewer v3.2.2 — full-with-opts-in" \
+            --title "File Viewer v3.2.2 — full-with-opts-in (Geo3D + XML)" \
             --notes-file "$notes" \
             --prerelease \
             --latest=false
