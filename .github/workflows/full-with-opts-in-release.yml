@@ -156,6 +156,7 @@ jobs:
           pnpm --filter @file-viewer/renderer-pdf... build
           pnpm --filter @file-viewer/renderer-design... build
           pnpm --filter @file-viewer/renderer-chm... build
+          pnpm --filter @file-viewer/renderer-media... build
 
       - name: Stage runtime assets for the standard pack
         run: pnpm --filter file-viewer-copy-assets stage-assets
