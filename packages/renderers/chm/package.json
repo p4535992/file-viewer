@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-chm",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "sideEffects": false,
@@ -78,11 +78,11 @@
     "build:ts": "tsc -b tsconfig.json --force",
     "build:wasm": "node scripts/build-wasm.mjs",
     "build:worker": "node scripts/build-worker.mjs",
-    "build": "pnpm build:ts && pnpm build:wasm && pnpm build:worker",
+    "build": "pnpm build:ts && pnpm build:worker",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.1.2"
+    "@file-viewer/core": "workspace:3.2.2"
   },
   "devDependencies": {
     "esbuild": "^0.28.1",

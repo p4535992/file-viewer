@@ -2,8 +2,12 @@ export { PptxViewer } from './viewer';
 export { PptxPresentation } from './presentation';
 export type { PptxPresentationLabels, PptxPresentationState } from './presentation';
 export { createPptxWorker, resolvePptxPackageWorkerUrl } from './worker';
-export { registerPptxChartLibraryLoader } from './chart';
+export { registerPptxChartLibraryLoader, registerPptxChartRenderer } from './chart';
 export type { PptxChartLibraries, PptxChartLibraryLoader } from './chart';
+export type {
+  PptxChartType, PptxChartLabels, PptxChartOptions, PptxChartSeries,
+  PptxChartAxis, PptxChartGroup, PptxChartModel, PptxChartMessage, PptxChartCollection, PptxChartRenderer,
+} from './chart-types';
 export {
   RECOMMENDED_ZIP_LIMITS,
   createDefaultPptxOptions,

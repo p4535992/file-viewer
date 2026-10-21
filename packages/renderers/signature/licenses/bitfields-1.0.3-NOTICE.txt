@@ -1,0 +1,34 @@
+bitfields@1.0.3
+
+Exact public crate checksum: ef6e59298da389bc0649c7463856b34c6e17fe542f88939426ede4436c6b1195
+
+Original Cargo.toml SHA-256: 4fd5fcc6895cfb1ed12e9b7e4524cec23d207ab9770e4867e263f90be3387da9
+
+Published SPDX declaration: MIT
+
+Public source: https://static.crates.io/crates/bitfields/bitfields-1.0.3.crate
+
+Original upstream LICENSE; fixed publication VCS commit a3c3d994c87c4f9cab566b3bbb5eb9bd1b2a9a98.
+
+MIT License
+
+Copyright (c) 2024 Gregory Gaines
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+

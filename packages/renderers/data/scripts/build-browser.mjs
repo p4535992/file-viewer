@@ -3,6 +3,8 @@ import { mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { writeBundleNotices } from '../../../build-support/bundle-notices.mjs'
+import { writeBundleInventory } from '../../../build-support/bundle-inventory.mjs'
+import { browserRuntimeOptions } from '../../../build-support/browser-runtime-options.mjs'
 
 const require = createRequire(import.meta.url)
 const output = new URL('../dist/vendor/', import.meta.url)
@@ -37,7 +39,8 @@ const result = await build({
   inject: [fileURLToPath(new URL('browser-globals.js', import.meta.url))],
   define: { global: 'globalThis' },
   metafile: true,
-  legalComments: 'eof',
+  ...browserRuntimeOptions(),
   outfile: fileURLToPath(new URL('avsc.cjs', output))
 })
 await writeBundleNotices(result.metafile, new URL('avsc.NOTICE.txt', output))
+await writeBundleInventory(Object.keys(result.metafile.inputs), fileURLToPath(new URL('../.build/avsc-inputs.json', import.meta.url)))

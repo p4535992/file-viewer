@@ -1,9 +1,15 @@
+import { loadInstalledPackage } from '../../packages/build-support/installed-package-root.mjs'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { pnpmInvocation } from './lib/pinned-pnpm.mjs'
+import {
+  verifyCodecArtifact,
+  verifyCodecLockIntegrity,
+  verifyDicomSourceLicenses
+} from './lib/verified-codec-artifacts.mjs'
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const sourceRoot = resolve(scriptDir, '../..')
@@ -11,7 +17,21 @@ const pnpm = pnpmInvocation()
 const packageDir = join(sourceRoot, 'packages/renderers/dicom')
 const ledgerPath = join(packageDir, 'THIRD_PARTY_LICENSES.json')
 const noticesPath = join(packageDir, 'THIRD_PARTY_NOTICES.md')
+const capabilityPath = join(packageDir, 'file-viewer.capability.json')
 const write = process.argv.includes('--write')
+const nativeProvenance = JSON.parse(
+  readFileSync(join(packageDir, 'third-party/native-codecs/PROVENANCE.json'), 'utf8')
+)
+const nativeArtifacts = new Map(
+  nativeProvenance.wrapperArtifacts.map((artifact) => [artifact.name, artifact])
+)
+assert(
+  nativeProvenance.schemaVersion === 1 && nativeArtifacts.size === 5,
+  'Expected five reviewed native codec artifacts'
+)
+const lockfile = readFileSync(join(sourceRoot, 'pnpm-lock.yaml'), 'utf8')
+for (const artifact of nativeArtifacts.values()) verifyCodecLockIntegrity(lockfile, artifact)
+const wrapperSourceLicenses = verifyDicomSourceLicenses(packageDir, nativeProvenance)
 const allowedLicenses = new Set([
   '(MIT AND Zlib)',
   '(WTFPL OR MIT)',
@@ -33,28 +53,17 @@ const licenseSelections = new Map([
     }
   ]
 ])
-const knownPlatformOptionalPackages = new Map([
-  [
-    '@rollup/rollup-linux-x64-gnu@4.13.0',
-    {
-      author: 'Rollup contributors',
-      license: 'MIT',
-      repository: 'https://github.com/rollup/rollup'
-    }
-  ]
-])
 const repositoryOverrides = new Map([
   ['@cornerstonejs/calculate-suv', 'https://github.com/cornerstonejs/calculate-suv'],
   ['@cornerstonejs/codec-libjpeg-turbo-8bit', 'https://github.com/cornerstonejs/codecs'],
   ['@cornerstonejs/codec-openjpeg', 'https://github.com/cornerstonejs/codecs']
 ])
-const cornerstoneCodecsGitHead = '8634194b68ab43bde8f35fcc466a36d91ac700b4'
 const nativeCodecComponents = [
   {
     name: 'CharLS',
-    wrapperPackage: '@cornerstonejs/codec-charls@1.2.5',
+    wrapperPackage: '@cornerstonejs/codec-charls@1.2.7',
     repository: 'https://github.com/cornerstonejs/charls',
-    sourceSha: '38d95d00671f4cddfa61f3f51eaf81b8bac34543',
+    sourceSha: '9930a2a2fa75f516c4a08708180c9907fa501a97',
     license: 'BSD-3-Clause',
     linkedTarget: 'charls',
     files: [
@@ -62,11 +71,13 @@ const nativeCodecComponents = [
         path: 'third-party/native-codecs/charls/LICENSE.md',
         sha256: 'e293ccc327ee42f4e723e73aac39b23ffc40655cc6f8baec5c046f2e7d093695'
       }
-    ]
+    ],
+    wrapperGitHead: 'd546620bc7814e836a0587e878b17e95146c76d0',
+    buildGitCommit: '70030e062b3ff0a2ac69dfbe4a2012d0567cc579'
   },
   {
     name: 'libjpeg-turbo',
-    wrapperPackage: '@cornerstonejs/codec-libjpeg-turbo-8bit@1.2.4',
+    wrapperPackage: '@cornerstonejs/codec-libjpeg-turbo-8bit@1.2.7',
     repository: 'https://github.com/cornerstonejs/libjpeg-turbo',
     sourceSha: 'dc4a93fab38b42d29b89a533409e012570180e28',
     license: 'IJG AND BSD-3-Clause AND Zlib',
@@ -80,13 +91,15 @@ const nativeCodecComponents = [
         path: 'third-party/native-codecs/libjpeg-turbo/README.ijg',
         sha256: '4b7b9f8c03bb8d60270dfd12684e70ab21e4abfd27e73905cd1a7c4cae6f5cdb'
       }
-    ]
+    ],
+    wrapperGitHead: '5c48f12a598db126de66c07779ac764ee1a3bc42',
+    buildGitCommit: '3f122136bfdfff94ce7c5be92c62ae129c182fda'
   },
   {
     name: 'OpenJPEG',
-    wrapperPackage: '@cornerstonejs/codec-openjpeg@1.3.2',
+    wrapperPackage: '@cornerstonejs/codec-openjpeg@1.3.6',
     repository: 'https://github.com/cornerstonejs/openjpeg',
-    sourceSha: '2d606701e8b7aa83f657d113c3367508e99bd12b',
+    sourceSha: '6c4a29b00211eb0430fa0e5e890f1ce5c80f409f',
     license: 'BSD-2-Clause',
     linkedTarget: 'openjp2',
     files: [
@@ -94,23 +107,109 @@ const nativeCodecComponents = [
         path: 'third-party/native-codecs/openjpeg/LICENSE',
         sha256: 'a6af136f3e15038a666b61f376612a07d9a4e48cb7c01adbf3e33b3f14ab49b6'
       }
-    ]
+    ],
+    wrapperGitHead: '5c48f12a598db126de66c07779ac764ee1a3bc42',
+    buildGitCommit: '3f122136bfdfff94ce7c5be92c62ae129c182fda'
   },
   {
     name: 'OpenJPH',
-    wrapperPackage: '@cornerstonejs/codec-openjph@2.4.9',
+    wrapperPackage: '@cornerstonejs/codec-openjph@2.4.11',
     repository: 'https://github.com/cornerstonejs/OpenJPH',
-    sourceSha: 'e01c7b7f9e7ecbb15cf13bb45661c9a41ab7fec6',
+    sourceSha: '4a68609b55034a14fac23f95afc60e239a9e809e',
     license: 'BSD-2-Clause',
-    linkedTarget: 'openjphsimd',
+    linkedTarget: 'openjph',
     files: [
       {
         path: 'third-party/native-codecs/openjph/LICENSE',
         sha256: '5ddf5177863dfc9ab65fa129d587db651241f00e21ed2427b218bea997591f98'
       }
-    ]
+    ],
+    wrapperGitHead: 'bac71dd0d78996e63f2dac3e9ee3a44f2b366a05',
+    buildGitCommit: 'bac71dd0d78996e63f2dac3e9ee3a44f2b366a05'
+  },
+  {
+    name: 'libjxl',
+    wrapperPackage: '@cornerstonejs/codec-libjxl@1.1.1',
+    repository: 'https://github.com/libjxl/libjxl',
+    sourceSha: '794a5dcf0d54f9f0b20d288a12e87afb91d20dfc',
+    license: 'BSD-3-Clause',
+    linkedTarget: 'jxl_dec and jxl_cms',
+    files: [
+      {
+        path: 'third-party/native-codecs/libjxl/LICENSE',
+        sha256: '8405932022a556380c2d8c272eff154a923feb197233f348ce5f7334fb0a5ede'
+      },
+      {
+        path: 'third-party/native-codecs/libjxl/PATENTS',
+        sha256: '91915f8ae056a68a3c5bdf05d9f6f78bb6903e27a8ca3a8434c9e4ac87300575'
+      },
+      {
+        path: 'third-party/native-codecs/libjxl/AUTHORS',
+        sha256: '00be88a8e3275f8f52a147ecede84c11900fd3180f88478d7cc9f55acabf3a35'
+      }
+    ],
+    wrapperGitHead: 'c44693e9c96a126cb100b2c56ebfb7cad1e0a428',
+    buildGitCommit: 'c9ffa62a82e837485fd9fc918555e340e8d0402a'
+  },
+  {
+    name: 'Brotli',
+    wrapperPackage: '@cornerstonejs/codec-libjxl@1.1.1',
+    repository: 'https://github.com/google/brotli',
+    sourceSha: '36533a866ed1ca4b75cf049f4521e4ec5fe24727',
+    license: 'MIT',
+    linkedTarget: 'brotlidec and brotlicommon',
+    files: [
+      {
+        path: 'third-party/native-codecs/brotli/LICENSE',
+        sha256: '3d180008e36922a4e8daec11c34c7af264fed5962d07924aea928c38e8663c94'
+      }
+    ],
+    wrapperGitHead: 'c44693e9c96a126cb100b2c56ebfb7cad1e0a428',
+    buildGitCommit: 'c9ffa62a82e837485fd9fc918555e340e8d0402a'
+  },
+  {
+    name: 'Highway',
+    wrapperPackage: '@cornerstonejs/codec-libjxl@1.1.1',
+    repository: 'https://github.com/google/highway',
+    sourceSha: '457c891775a7397bdb0376bb1031e6e027af1c48',
+    license: 'Apache-2.0',
+    linkedTarget: 'hwy',
+    files: [
+      {
+        path: 'third-party/native-codecs/highway/LICENSE',
+        sha256: '43070e2d4e532684de521b885f385d0841030efa2b1a20bafb76133a5e1379c1'
+      },
+      {
+        path: 'third-party/native-codecs/highway/LICENSE-BSD3',
+        sha256: 'd25e82e26acd42ca3ccc9993622631163425b869b9e16284226d534cff6470f2'
+      }
+    ],
+    wrapperGitHead: 'c44693e9c96a126cb100b2c56ebfb7cad1e0a428',
+    buildGitCommit: 'c9ffa62a82e837485fd9fc918555e340e8d0402a',
+    declaredLicense: 'Apache-2.0 OR BSD-3-Clause',
+    licenseSelectionNote:
+      'File Viewer elects Apache-2.0; both complete upstream texts are retained.'
+  },
+  {
+    name: 'skcms',
+    wrapperPackage: '@cornerstonejs/codec-libjxl@1.1.1',
+    repository: 'https://skia.googlesource.com/skcms',
+    sourceSha: '42030a771244ba67f86b1c1c76a6493f873c5f91',
+    license: 'BSD-3-Clause',
+    linkedTarget: 'skcms through jxl_cms',
+    files: [
+      {
+        path: 'third-party/native-codecs/skcms/LICENSE',
+        sha256: 'e59bb5c5c6ba426a9ac4ba9fe667ad14c5166b12aa25be8af1d122b14fbe2e36'
+      }
+    ],
+    wrapperGitHead: 'c44693e9c96a126cb100b2c56ebfb7cad1e0a428',
+    buildGitCommit: 'c9ffa62a82e837485fd9fc918555e340e8d0402a'
   }
 ]
+const cornerstoneCodecsGitHeads = Object.fromEntries(
+  nativeCodecComponents.map((component) => [component.wrapperPackage, component.wrapperGitHead])
+)
 const nativeWrapperNames = new Set(
   nativeCodecComponents.map((entry) => entry.wrapperPackage.replace(/@\d[^@]*$/, ''))
 )
@@ -169,8 +268,7 @@ function licenseFilesFor(packagePath) {
 }
 
 function loadPackageJson(packagePath) {
-  if (!packagePath || !existsSync(join(packagePath, 'package.json'))) return null
-  return JSON.parse(readFileSync(join(packagePath, 'package.json'), 'utf8'))
+  return loadInstalledPackage({ sourceRoot, path: packagePath }).packageJson
 }
 
 const listResult = spawnSync(
@@ -180,7 +278,6 @@ const listResult = spawnSync(
     '--filter',
     '@file-viewer/renderer-dicom',
     'list',
-    '--prod',
     '--depth',
     'Infinity',
     '--json'
@@ -196,20 +293,18 @@ assert(Array.isArray(roots) && roots.length === 1, 'Expected one DICOM package d
 
 const packages = new Map()
 function visit(node, nameHint, state) {
-  const packageJson = loadPackageJson(node?.path)
+  const { packageRoot: packagePath, packageJson } = loadInstalledPackage({
+    sourceRoot,
+    path: node?.path,
+    expectedName: node?.name || nameHint,
+    expectedVersion: String(node?.version || '')
+  })
   const name = packageJson?.name || nameHint || node?.name
   const version = packageJson?.version || String(node?.version || '').replace(/^link:/, '')
   assert(name && version, `Dependency tree entry is missing name/version: ${JSON.stringify(node)}`)
   const key = `${name}@${version}`
-  const fallback = knownPlatformOptionalPackages.get(key)
   const installedLicense = packageJson ? normalizeLicense(packageJson) : ''
-  if (fallback && installedLicense) {
-    assert(
-      installedLicense === fallback.license,
-      `${key} platform metadata license drifted from ${fallback.license}`
-    )
-  }
-  const declaredLicense = fallback?.license || installedLicense
+  const declaredLicense = installedLicense
   const selection = licenseSelections.get(name)
   if (selection) {
     assert(
@@ -217,7 +312,7 @@ function visit(node, nameHint, state) {
       `${key} license selection drifted from ${selection.declaredLicense}`
     )
     assert(
-      packageFilesForSelection(node?.path, selection.licenseFile),
+      packageFilesForSelection(packagePath, selection.licenseFile),
       `${key} is missing selected ${selection.selectedLicense} text in ${selection.licenseFile}`
     )
   }
@@ -228,13 +323,26 @@ function visit(node, nameHint, state) {
     `${key} uses unapproved license expression ${declaredLicense}`
   )
   if (nativeWrapperNames.has(name)) {
+    verifyCodecArtifact(packagePath, nativeArtifacts.get(name))
     assert(
-      packageJson?.gitHead === cornerstoneCodecsGitHead,
-      `${key} codec gitHead drifted from ${cornerstoneCodecsGitHead}`
+      Object.keys(packageJson.dependencies || {}).length === 0 &&
+        Object.keys(packageJson.optionalDependencies || {}).length === 0,
+      `${key} codec runtime or optional dependency declarations changed`
+    )
+    assert(
+      nativeArtifacts.get(name)?.gitHead === cornerstoneCodecsGitHeads[key],
+      `${key} codec release-source commit differs from its reviewed native component`
     )
   }
   const previous = packages.get(key)
-  const packageFiles = licenseFilesFor(node?.path)
+  const packageFiles = licenseFilesFor(packagePath)
+  const retained = wrapperSourceLicenses.find((entry) => entry.name === name)
+  if (retained) {
+    assert(
+      version === retained.version && declaredLicense === retained.declaredLicense,
+      `${key} retained source-license declaration drifted`
+    )
+  }
   const record = {
     name,
     version,
@@ -243,16 +351,13 @@ function visit(node, nameHint, state) {
     direct: Boolean(state.direct || previous?.direct),
     optional: previous ? Boolean(previous.optional && state.optional) : Boolean(state.optional),
     firstParty: name.startsWith('@file-viewer/'),
-    author: fallback?.author || normalizeAuthor(packageJson?.author) || '',
-    repository:
-      fallback?.repository ||
-      repositoryOverrides.get(name) ||
-      normalizeRepository(packageJson?.repository) ||
-      '',
+    author: normalizeAuthor(packageJson?.author) || '',
+    repository: repositoryOverrides.get(name) || normalizeRepository(packageJson?.repository) || '',
     licenseFiles: previous?.licenseFiles?.length
       ? previous.licenseFiles
       : packageFiles.licenseFiles,
-    noticeFiles: previous?.noticeFiles?.length ? previous.noticeFiles : packageFiles.noticeFiles
+    noticeFiles: previous?.noticeFiles?.length ? previous.noticeFiles : packageFiles.noticeFiles,
+    ...(retained ? { retainedSourceLicenses: [{ ...retained, filePath: undefined }] } : {})
   }
   packages.set(key, record)
 
@@ -266,7 +371,11 @@ function visit(node, nameHint, state) {
     })
   }
   for (const [dependencyName, child] of Object.entries(node?.optionalDependencies || {})) {
-    visit(child, dependencyName, { direct: state.root, root: false, optional: true })
+    visit(child, dependencyName, {
+      direct: state.root,
+      root: false,
+      optional: true
+    })
   }
 }
 
@@ -274,6 +383,18 @@ function packageFilesForSelection(packagePath, filename) {
   return Boolean(packagePath && existsSync(join(packagePath, filename)))
 }
 visit(roots[0], roots[0].name, { direct: false, root: true, optional: false })
+// The SDK is compiled into the shipped browser runtime. Keep its reviewed
+// source closure in the ledger after moving it to build dependencies.
+for (const name of [
+  '@cornerstonejs/core',
+  '@cornerstonejs/dicom-image-loader',
+  '@cornerstonejs/metadata'
+]) {
+  const sdk = roots[0].devDependencies?.[name]
+  assert(sdk, `Missing bundled SDK build dependency: ${name}`)
+  assert(loadPackageJson(sdk.path)?.version === '5.11.6', `Unreviewed SDK source version: ${name}`)
+  visit(sdk, name, { direct: true, root: false, optional: false })
+}
 
 function compareAscii(left, right) {
   return left < right ? -1 : left > right ? 1 : 0
@@ -283,8 +404,8 @@ const sortedPackages = [...packages.values()].sort(
   (left, right) => compareAscii(left.name, right.name) || compareAscii(left.version, right.version)
 )
 assert(
-  sortedPackages.some((entry) => entry.name === '@rollup/rollup-linux-x64-gnu' && entry.optional),
-  'Linux codec optional dependency is missing'
+  !sortedPackages.some((entry) => entry.name === 'rollup' || entry.name.startsWith('@rollup/')),
+  'Unreviewed Rollup build dependency entered the codec runtime/SDK source closure'
 )
 assert(
   sortedPackages.some((entry) => entry.license === 'CC-BY-4.0'),
@@ -294,10 +415,14 @@ assert(
   !sortedPackages.some((entry) => /(?:^|[^A-Z])(AGPL|GPL|LGPL|SSPL)(?:-|\b)/i.test(entry.license)),
   'Strong-copyleft dependency detected'
 )
+assert(
+  JSON.stringify(nativeProvenance.components) === JSON.stringify(nativeCodecComponents),
+  'Native codec release-source records drifted'
+)
 for (const component of nativeCodecComponents) {
   assert(
     sortedPackages.some((entry) => `${entry.name}@${entry.version}` === component.wrapperPackage),
-    `${component.wrapperPackage} wrapper is missing from production closure`
+    `${component.wrapperPackage} wrapper is missing from the reviewed SDK source closure`
   )
   assert(
     !/(?:^|[^A-Z])(AGPL|GPL|LGPL|SSPL)(?:-|\b)/i.test(component.license),
@@ -332,12 +457,13 @@ assert(
 )
 
 const ledger = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedFrom: {
     packageName: '@file-viewer/renderer-dicom',
     packageVersion: roots[0].version,
     packageManager: 'pnpm',
-    command: 'pnpm --filter @file-viewer/renderer-dicom list --prod --depth Infinity --json'
+    command:
+      'pnpm --filter @file-viewer/renderer-dicom list --depth Infinity --json; direct runtime and three bundled Cornerstone SDK roots only'
   },
   policy: {
     allowedSpdxExpressions: [...allowedLicenses].sort(),
@@ -345,9 +471,11 @@ const ledger = {
     closureIncludesPlatformOptionalDependencies: true
   },
   nativeCodecBuild: {
-    cornerstoneCodecsGitHead,
+    wrapperReleaseSourceCommits: cornerstoneCodecsGitHeads,
     note: 'The npm wrapper license describes JavaScript glue; these entries describe native libraries statically linked into the shipped WebAssembly codecs.',
-    components: nativeCodecComponents
+    components: nativeCodecComponents,
+    wrapperSourceLicenses: nativeProvenance.wrapperSourceLicenses,
+    sdkSourceLicenses: nativeProvenance.sdkSourceLicenses
   },
   packages: sortedPackages
 }
@@ -363,9 +491,9 @@ const packageVersionList = (name) => {
 const noticeLines = [
   '# Third-party notices',
   '',
-  'This file records the complete production dependency closure of the optional `@file-viewer/renderer-dicom` package, including the Linux-only optional codec dependency. Exact machine-readable versions, SPDX expressions, source repositories, and packaged license/notice filenames are in `THIRD_PARTY_LICENSES.json`.',
+  'This file records direct runtime dependencies and the complete reviewed source closure of the three Cornerstone 5.11.6 SDK build dependencies. All declared optional dependency edges are traversed. The five reviewed codec wrappers declare no runtime or optional dependencies, and this closure contains no Rollup build tools. The direct core closure retains its optional trusted-types declarations. The browser SDK is compiled into the ordinary npm package; consumers do not need application security overrides. Exact source versions, SPDX expressions, repositories, and upstream license/notice filenames are in `THIRD_PARTY_LICENSES.json`. Actual bundled inputs, output hashes, and decoder WASM hashes are recorded in `dist/bundled-runtime.json`; complete JavaScript license texts are retained in `dist/THIRD_PARTY_LICENSES.txt`.',
   '',
-  'The DICOM renderer is not part of any standard/full package or preset. These dependencies are installed only when this capability is selected, and its Cornerstone implementation is loaded only when a DICOM file is opened.',
+  'The DICOM renderer is not part of any standard/full package or preset. The bundled Cornerstone implementation is installed only when this capability is selected and loaded only when a DICOM file is opened. Source-closure entries are an attribution inventory; unused build dependencies are not necessarily present in the runtime bundle.',
   '',
   '## Required attribution',
   '',
@@ -377,25 +505,31 @@ const noticeLines = [
   '',
   '### Native libraries statically linked into codec WebAssembly',
   '',
-  `All four codec wrapper packages were built from \`cornerstonejs/codecs\` commit \`${cornerstoneCodecsGitHead}\`. The wrapper package license is not used as a substitute for the linked native library terms:`,
+  'Exact official tarball integrities and the complete installed-file inventory are retained in `third-party/native-codecs/PROVENANCE.json`. The verifier checks every codec file and lockfile integrity against those reviewed artifacts; source gitlinks describe release-source provenance, not an independent reproducible-build claim.',
+  '',
+  'The five wrapper releases record separate registry release commits and verified GitHub Actions build checkout commits. Their reviewed native-library gitlinks and wrapper/build sources match; this record does not claim an independent bit-for-bit rebuild. The wrapper package license is not used as a substitute for linked native library terms:',
+  '',
+  'The official libjpeg-turbo-8bit 1.2.7, OpenJPEG 1.3.6 and libjxl 1.1.1 tarballs omit their wrapper license files. The complete upstream root MIT license is retained at `third-party/native-codecs/wrapper/LICENSE`, verified against both exact release and signed build commits and the preceding published license bytes. The libjpeg wrapper npm metadata declares ISC and the libjxl wrapper metadata declares BSD-3-Clause while their root source text is MIT; all declarations remain recorded without altering upstream package bytes. Normal builds bind this full text to the exact package versions, declarations, source commits and SHA-256 and include it in generated bundle notices.',
   '',
   ...nativeCodecComponents.flatMap((component) => [
-    `- \`${component.name}\` (\`${component.wrapperPackage}\`): \`${component.license}\`; source \`${component.sourceSha}\` at ${component.repository}; linked target \`${component.linkedTarget}\`; retained files ${component.files.map((file) => `\`${file.path}\``).join(', ')}.`
+    `- \`${component.name}\` (\`${component.wrapperPackage}\`): \`${component.license}\`; wrapper release \`${component.wrapperGitHead}\`, build checkout \`${component.buildGitCommit}\`; native source \`${component.sourceSha}\` at ${component.repository}; linked target \`${component.linkedTarget}\`; retained files ${component.files.map((file) => `\`${file.path}\``).join(', ')}.`
   ]),
   '',
   '**libjpeg-turbo attribution:** This software is based in part on the work of the Independent JPEG Group.',
   '',
-  'The complete libjpeg-turbo `LICENSE.md` and unmodified `README.ijg` are shipped with the package, together with the exact CharLS, OpenJPEG, and OpenJPH license texts. These native components use BSD-style, IJG, and zlib terms; none is LGPL or strong copyleft.',
+  'The full exact-source SDK MIT text is retained for core, metadata and utils 5.11.6, whose tarballs omit it. Their separate registry and verified publisher-build commits and complete official file inventories are recorded in `PROVENANCE.json`; normal builds check these bytes and include the unmodified license text in bundle notices.',
+  '',
+  'The complete libjpeg-turbo `LICENSE.md` and unmodified `README.ijg` are shipped with the package, together with the exact CharLS, OpenJPEG, and OpenJPH license texts. The additional JPEG XL component ships its LICENSE, PATENTS and AUTHORS along with the exact linked Brotli MIT, Highway Apache-2.0 (both dual-license texts retained) and skcms BSD-3-Clause texts. The native components use BSD-style, MIT, Apache-2.0, IJG and zlib terms; none is LGPL or strong copyleft.',
   '',
   'None of the Apache-2.0 dependencies in this closure publishes a top-level `NOTICE` file. All top-level license and notice files found in each installed package are recorded in the ledger.',
   '',
-  '## Exact third-party closure by SPDX expression',
+  '## Reviewed runtime and SDK source closure by SPDX expression',
   ''
 ]
 for (const license of [...grouped.keys()].sort()) {
   noticeLines.push(`### ${license}`, '')
   for (const entry of grouped.get(license)) {
-    const optional = entry.optional ? ' (platform-optional)' : ''
+    const optional = entry.optional ? ' (optional)' : ''
     const source = entry.repository ? ` — ${entry.repository}` : ''
     noticeLines.push(`- \`${entry.name}@${entry.version}\`${optional}${source}`)
   }
@@ -403,10 +537,34 @@ for (const license of [...grouped.keys()].sort()) {
 }
 const noticesText = `${noticeLines.join('\n').trimEnd()}\n`
 
+const capability = JSON.parse(readFileSync(capabilityPath, 'utf8'))
+capability.license = {
+  spdx: packageManifest.license,
+  policy: 'permissive',
+  notices: [
+    ...thirdPartyPackages.map((entry) => ({
+      packageName: entry.name,
+      spdx: entry.license,
+      notice: `Reviewed runtime/SDK source ${entry.name}@${entry.version}; repository ${entry.repository || 'recorded in THIRD_PARTY_LICENSES.json'}; complete license and notice filenames are recorded in THIRD_PARTY_LICENSES.json.`
+    })),
+    ...nativeCodecComponents.map((component) => ({
+      packageName: `${component.name} native codec`,
+      spdx: component.license,
+      notice: `Source ${component.sourceSha}; wrapper ${component.wrapperPackage}; linked target ${component.linkedTarget}; exact texts: ${component.files.map((file) => file.path).join(', ')}.${component.name === 'libjpeg-turbo' ? ' This software is based in part on the work of the Independent JPEG Group.' : ''}`
+    }))
+  ]
+}
+const capabilityText = `${JSON.stringify(capability, null, 2)}\n`
+
 if (write) {
   writeFileSync(ledgerPath, ledgerText)
   writeFileSync(noticesPath, noticesText)
+  writeFileSync(capabilityPath, capabilityText)
 } else {
+  assert(
+    readFileSync(capabilityPath, 'utf8') === capabilityText,
+    'DICOM capability license metadata is stale; run verifier with --write'
+  )
   assert(existsSync(ledgerPath), `Missing ${relative(sourceRoot, ledgerPath)}; run with --write`)
   assert(existsSync(noticesPath), `Missing ${relative(sourceRoot, noticesPath)}; run with --write`)
   assert(
@@ -423,5 +581,5 @@ const counts = Object.fromEntries(
   [...grouped].map(([license, entries]) => [license, entries.length])
 )
 console.log(
-  `[dicom-license-ledger] Verified ${sortedPackages.length} production packages (${thirdPartyPackages.length} third-party, ${sortedPackages.filter((entry) => entry.optional).length} platform-optional): ${JSON.stringify(counts)}`
+  `[dicom-license-ledger] Verified ${sortedPackages.length} runtime/SDK source packages (${thirdPartyPackages.length} third-party, ${sortedPackages.filter((entry) => entry.optional).length} optional): ${JSON.stringify(counts)}`
 )

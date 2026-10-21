@@ -1,5 +1,23 @@
 # @file-viewer/react-legacy
 
+<!-- FILE_VIEWER_PACKAGE_HEADER -->
+<p>
+  <a href="https://www.npmjs.com/package/@file-viewer/react-legacy"><img src="https://img.shields.io/npm/v/@file-viewer%2Freact-legacy?logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@file-viewer/react-legacy"><img src="https://img.shields.io/npm/dm/@file-viewer%2Freact-legacy?logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<p>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/zh/">文档</a> · <a href="https://demo.file-viewer.app/">在线 Demo</a> · <a href="https://doc.file-viewer.app/guide/formats">格式矩阵</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">问题反馈</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/components/react-legacy/README.en.md">English</a>
+</p>
+
+<p>
+  <a href="https://demo.file-viewer.app/"><img src="https://raw.githubusercontent.com/flyfish-dev/file-viewer/main/docs/public/_media/file-viewer-demo-v3-zh.webp" width="760" alt="File Viewer 在线演示：Word、Excel、PPT、3D 模型、CAD 图纸与二进制检查器"></a>
+</p>
+
+> ⭐ 如果 File Viewer 对你有帮助，欢迎到 [GitHub](https://github.com/flyfish-dev/file-viewer) 点个 Star。
+
 标准 React legacy native 组件包，面向 React 16.8 和 React 17。它不依赖 React 18/19 的能力，也不依赖新的 JSX transform，内部通过本包本地 controller 调用 `@file-viewer/core` 与 core browser engine 挂载完整预览器。
 
 ```bash
@@ -75,7 +93,7 @@ English README: [README.en.md](./README.en.md)。
 
 ## 格式支持矩阵
 
-共享格式目录当前注册 274 个扩展名（224 个稳定、50 个实验），映射到 47 条预览链路。实验格式不计入稳定支持数量；完整能力通过 renderer / preset 按需装配。
+共享格式目录当前注册 275 个扩展名（225 个稳定、50 个实验），映射到 47 条预览链路。实验格式不计入稳定支持数量；完整能力通过 renderer / preset 按需装配。
 
 | 预览链路 | 分类 | 扩展名 | 等级 / 状态 | 能力 | 加载 |
 | --- | --- | --- | --- | --- | --- |
@@ -111,7 +129,7 @@ English README: [README.en.md](./README.en.md)。
 | DICOM | medical-image | `.dcm`, `.dicom` | basic / experimental | 下载, 缩放(Provider) | 按需异步 |
 | Digital signatures and evidence containers | cryptographic-container | `.p7m`, `.p7s`, `.p7c`, `.p7b`, `.pkcs7`, `.cms`, `.cmsc`, `.tsd`, `.tst`, `.tsq`, `.tsr`, `.asics`, `.scs`, `.asice`, `.sce`, `.ers`, `.asc`, `.sig`, `.pgp`, `.gpg`, `.jws` | structured / experimental | 下载 | 按需异步 |
 | Markdown | markdown | `.md`, `.markdown` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
-| Code and Text | code | `.txt`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
+| Code and Text | code | `.txt`, `.lrc`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
 | Video | media | `.mp4`, `.webm`, `.m3u8` | high-fidelity / stable | 下载 | 按需异步 |
 | Audio | media | `.mp3`, `.mpeg`, `.wav`, `.ogg`, `.oga`, `.opus`, `.m4a`, `.aac`, `.flac`, `.weba`, `.midi`, `.mid` | high-fidelity / stable | 下载 | 按需异步 |
 | Adobe Photoshop | asset | `.psb`, `.pdd`, `.psdt`, `.psd`（增强 `data-asset`） | experimental / experimental | 下载, 打印, 缩放 | 按需异步 |
@@ -404,3 +422,15 @@ const options = {
 
 在线 Demo: https://demo.file-viewer.app/ 。File Viewer 自身源码与本仓生成的组件包使用 Apache-2.0；发行物若包含 `@file-viewer/ppt` 运行时，该运行时保留其独立 LICENSE 与 NOTICE，不被 Apache-2.0 重新许可。二开或商用请保留 Flyfish Viewer 来源说明；如果修复了通用兼容问题，也欢迎贡献回对应组件仓库。
 <!-- FILE_VIEWER_GENERATED:END -->
+
+## 格式与相关包
+
+File Viewer 在浏览器内预览 275+ 种扩展名，覆盖 Office、PDF/OFD、CAD、3D、压缩包、邮件、图片、音视频和代码，无需服务端转码；完整清单见 [格式矩阵](https://doc.file-viewer.app/guide/formats)。
+
+- 组件：`@file-viewer/web`、`@file-viewer/vue3`、`@file-viewer/vue2.7`、`@file-viewer/vue2.6`、`@file-viewer/react`、`@file-viewer/react-legacy`、`@file-viewer/svelte`、`@file-viewer/jquery`，以及对应的 `-full` 包
+- 能力组合：`@file-viewer/preset-lite`、`@file-viewer/preset-office`、`@file-viewer/preset-engineering`、`@file-viewer/preset-all`
+- 构建：`@file-viewer/vite-plugin`、`file-viewer-copy-assets`
+
+## 许可证
+
+本包采用 Apache-2.0。详见 [LICENSE](https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE)。

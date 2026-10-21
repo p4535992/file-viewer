@@ -27,10 +27,10 @@ export const DEFAULT_FILE_VIEWER_CHM_WASM_PATH = 'vendor/chm/chm_wasm_bg.wasm';
 export const DEFAULT_FILE_VIEWER_CHM_WASM_PACKAGE_PATH = '@file-viewer/renderer-chm/wasm/chm_wasm_bg.wasm';
 export const DEFAULT_FILE_VIEWER_DOCX_WORKER_PATH = 'vendor/docx/docx.worker.js';
 export const DEFAULT_FILE_VIEWER_DOCX_WORKER_JSZIP_PATH = 'vendor/docx/jszip.min.js';
-export const DEFAULT_FILE_VIEWER_DOCX_RUNTIME_VERSION = '0.3.32';
+export const DEFAULT_FILE_VIEWER_DOCX_RUNTIME_VERSION = '0.3.36';
 export const DEFAULT_FILE_VIEWER_PRESENTATION_WORKER_PATH = 'vendor/pptx/pptx.worker.js';
 export const DEFAULT_FILE_VIEWER_PPT_RUNTIME_PATH = 'vendor/ppt';
-export const DEFAULT_FILE_VIEWER_PPT_RUNTIME_VERSION = '0.3.4';
+export const DEFAULT_FILE_VIEWER_PPT_RUNTIME_VERSION = '0.3.6';
 export const DEFAULT_FILE_VIEWER_PPT_MODULE_PATH = `${DEFAULT_FILE_VIEWER_PPT_RUNTIME_PATH}/index.mjs`;
 export const DEFAULT_FILE_VIEWER_PPT_WORKER_PATH = `${DEFAULT_FILE_VIEWER_PPT_RUNTIME_PATH}/worker.mjs`;
 export const DEFAULT_FILE_VIEWER_PPT_FRAME_CACHE_PATH = `${DEFAULT_FILE_VIEWER_PPT_RUNTIME_PATH}/frame-cache.mjs`;
@@ -54,7 +54,7 @@ export const DEFAULT_FILE_VIEWER_PDF_STANDARD_FONT_PATH = 'vendor/pdf/standard_f
 export const DEFAULT_FILE_VIEWER_PDF_CJK_FONT_FALLBACK_PATH = 'vendor/pdf/fonts/';
 export const DEFAULT_FILE_VIEWER_DRAWIO_VIEWER_SCRIPT_PATH = 'vendor/drawio/viewer-static.min.js';
 export const DEFAULT_FILE_VIEWER_DRAWIO_ASSET_PATH = 'vendor/drawio/';
-export const DEFAULT_FILE_VIEWER_CAD_RUNTIME_VERSION = '0.8.2';
+export const DEFAULT_FILE_VIEWER_CAD_RUNTIME_VERSION = '0.8.3';
 export const COMPATIBILITY_FILE_VIEWER_CAD_RUNTIME_VERSION = '0.8.0';
 export const DEFAULT_FILE_VIEWER_CAD_WASM_PATH =
   `wasm/cad/${DEFAULT_FILE_VIEWER_CAD_RUNTIME_VERSION}/`;
@@ -103,6 +103,14 @@ export const DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_APACHE_LICENSE_PATH = 'vendor/d
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_APACHE_LICENSE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Stet-Apache-2.0.txt';
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PATH = 'vendor/design/LICENSE.stet-MIT.txt';
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Stet-MIT.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PATH = 'vendor/design/LICENSE.Stet-URW-Fonts-OFL-1.1.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Stet-URW-Fonts-OFL-1.1.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PATH = 'vendor/design/LICENSE.Stet-CMYK-Profile.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Stet-CMYK-Profile.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PATH = 'vendor/design/LICENSE.CC0-1.0.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/CC0-1.0.txt';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PATH = 'vendor/design/Stet_NATIVE_THIRD_PARTY_LICENSES.json';
+export const DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Stet_NATIVE_THIRD_PARTY_LICENSES.json';
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CARLITO_LICENSE_PATH = 'vendor/design/LICENSE.Carlito-OFL-1.1.txt';
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_CARLITO_LICENSE_PACKAGE_PATH = '@file-viewer/renderer-design/licenses/Carlito-OFL-1.1.txt';
 export const DEFAULT_FILE_VIEWER_POSTSCRIPT_TINOS_LICENSE_PATH = 'vendor/design/LICENSE.Tinos-OFL-1.1.txt';
@@ -793,6 +801,24 @@ export const DEFAULT_FILE_VIEWER_RENDERER_ASSET_MANIFESTS: readonly FileViewerRe
         description: 'LibreDWG WebAssembly runtime loaded by the CAD DWG worker for offline parsing.',
       },
       {
+        id: 'cad-license',
+        rendererId: 'cad',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: `${DEFAULT_FILE_VIEWER_CAD_WASM_PATH}LICENSE`,
+        description: 'The installed CAD runtime redistribution license.',
+      },
+      {
+        id: 'cad-notice',
+        rendererId: 'cad',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: `${DEFAULT_FILE_VIEWER_CAD_WASM_PATH}NOTICE`,
+        description: 'The installed CAD runtime third-party attribution notice.',
+      },
+      {
         id: 'cad-compat-0-8-0-wasm-directory',
         rendererId: 'cad',
         kind: 'wasm-directory',
@@ -1087,11 +1113,40 @@ export const DEFAULT_FILE_VIEWER_RENDERER_ASSET_MANIFESTS: readonly FileViewerRe
         packagePath: DEFAULT_FILE_VIEWER_WORDPERFECT_MODULE_PACKAGE_PATH,
         description: 'Emscripten ES module loader for the MPL-2.0 libwpd/librevenge WebAssembly runtime.',
       },
+      {
+        id: 'wordperfect-third-party-notices',
+        rendererId: 'office-wordperfect',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: 'vendor/wordperfect/THIRD_PARTY_NOTICES.md',
+        packagePath: '@file-viewer/renderer-wordperfect/third-party-notices',
+        description: 'Matching source availability and third-party notices for the WordPerfect native runtime.',
+      },
+      {
+        id: 'wordperfect-native-licenses',
+        rendererId: 'office-wordperfect',
+        kind: 'directory',
+        target: 'public',
+        required: true,
+        defaultPath: 'vendor/wordperfect/licenses',
+        description: 'Complete parser and linked toolchain licenses and native provenance.',
+      },
     ],
   },
   {
     rendererId: 'typst',
     assets: [
+      {
+        id: 'typst-native-third-party-licenses',
+        rendererId: 'typst',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: 'wasm/typst/NATIVE_THIRD_PARTY_LICENSES.json',
+        packagePath: '@file-viewer/renderer-typst/native-third-party-licenses',
+        description: 'Complete collected native dependency license texts and matching Typst WASM provenance.',
+      },
       {
         id: 'typst-compiler-wasm',
         rendererId: 'typst',
@@ -1308,7 +1363,7 @@ export const DEFAULT_FILE_VIEWER_RENDERER_ASSET_MANIFESTS: readonly FileViewerRe
         defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_WASM_PATH,
         packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_WASM_PACKAGE_PATH,
         optionPath: 'design.postscriptWasmUrl',
-        description: 'License-safe Stet WebAssembly interpreter with OFL substitutes and no bundled CMYK ICC profile.',
+        description: 'Unpatched Stet WebAssembly interpreter with URW Base35 OFL fonts and the CC0 Compact ICC CMYK profile.',
       },
       {
         id: 'postscript-design-license-stet-apache',
@@ -1329,6 +1384,46 @@ export const DEFAULT_FILE_VIEWER_RENDERER_ASSET_MANIFESTS: readonly FileViewerRe
         defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PATH,
         packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PACKAGE_PATH,
         description: 'Stet MIT license text.',
+      },
+      {
+        id: 'postscript-design-license-urw-ofl',
+        rendererId: 'postscript-design',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PATH,
+        packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PACKAGE_PATH,
+        description: 'URW Base35 font provenance, copyright notices and complete SIL OFL 1.1 text.',
+      },
+      {
+        id: 'postscript-design-license-cmyk-provenance',
+        rendererId: 'postscript-design',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PATH,
+        packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PACKAGE_PATH,
+        description: 'Provenance of the CC0 Compact ICC CMYK profile embedded by Stet.',
+      },
+      {
+        id: 'postscript-design-license-cc0',
+        rendererId: 'postscript-design',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PATH,
+        packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PACKAGE_PATH,
+        description: 'Complete CC0 1.0 legal text for the embedded CMYK profile.',
+      },
+      {
+        id: 'postscript-design-license-native-dependencies',
+        rendererId: 'postscript-design',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PATH,
+        packagePath: DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PACKAGE_PATH,
+        description: 'Exact locked Rust dependency legal materials and original standard-library grants, bound to the Stet WASM hash.',
       },
       {
         id: 'postscript-design-license-carlito-ofl',
@@ -1376,6 +1471,16 @@ export const DEFAULT_FILE_VIEWER_RENDERER_ASSET_MANIFESTS: readonly FileViewerRe
     rendererId: 'indesign-idml-design',
     assets: [
       ...createDesignThirdPartyAssets('indesign-idml-design'),
+      {
+        id: 'indesign-idml-native-third-party-licenses',
+        rendererId: 'indesign-idml-design',
+        kind: 'license',
+        target: 'public',
+        required: true,
+        defaultPath: 'vendor/design/Introspect_NATIVE_THIRD_PARTY_LICENSES.json',
+        packagePath: '@file-viewer/renderer-design/licenses/Introspect_NATIVE_THIRD_PARTY_LICENSES.json',
+        description: 'Complete collected native dependency license texts and matching Introspect WASM provenance.',
+      },
       {
         id: 'indesign-idml-worker',
         rendererId: 'indesign-idml-design',

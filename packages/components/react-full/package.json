@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/react-full",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Full React package with preset-all; Vite publishes deployment-base/file-viewer assets, and other bundlers use the included same-version copy CLI.",
@@ -64,12 +64,12 @@
     "react": ">=17 <20"
   },
   "dependencies": {
-    "@file-viewer/preset-all": "workspace:3.1.2",
-    "@file-viewer/react": "workspace:3.1.2",
-    "file-viewer-copy-assets": "workspace:3.1.2"
+    "@file-viewer/preset-all": "workspace:3.2.2",
+    "@file-viewer/react": "workspace:3.2.2",
+    "file-viewer-copy-assets": "workspace:3.2.2"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
+    "@types/react": "^19.3.0",
     "react": "^19.2.7",
     "typescript": "^6.0.3"
   },

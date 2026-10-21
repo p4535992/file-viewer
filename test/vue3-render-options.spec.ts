@@ -8,6 +8,30 @@ vi.mock('vue', async (importOriginal) => ({
 }))
 
 describe('Vue document render options', () => {
+  it('reloads an Excel preview when the viewport-fill option changes', async () => {
+    const scope = effectScope()
+    const props = reactive({ spreadsheet: { fillViewport: false } })
+    const refreshPreview = vi.fn()
+    scope.run(() => useViewerPreviewLifecycle({
+      getFile: () => 'small.xlsx',
+      getUrl: () => undefined,
+      getRenderOptions: () => props.spreadsheet,
+      refreshPreview,
+      cancelPreview: vi.fn(),
+      clearRenderedContent: vi.fn(),
+      resetLoading: vi.fn(),
+      stopZoomObserver: vi.fn(),
+      stopFitObserver: vi.fn(),
+      stopViewStateObserver: vi.fn()
+    }))
+    props.spreadsheet.fillViewport = true
+    await nextTick()
+    expect(refreshPreview).toHaveBeenCalledTimes(2)
+    props.spreadsheet = { fillViewport: true }
+    await nextTick()
+    expect(refreshPreview).toHaveBeenCalledTimes(2)
+    scope.stop()
+  })
   it('reloads XML profiles when configuration changes without changing the file', async () => {
     const scope = effectScope()
     const props = reactive({ xml: { profilesUrl: '/profiles/first.json' } })

@@ -297,6 +297,8 @@ export type {
 
 export {
   createRendererRegistry,
+  matchesFileViewerRendererFilename,
+  resolveFileViewerRendererDefinition,
 } from './registry/registry';
 
 export {
@@ -331,6 +333,8 @@ export {
   normalizeFileExtension,
   normalizeFilename,
   normalizeSource,
+  DEFAULT_FILE_VIEWER_TEXT_FALLBACK_ENCODING,
+  isSingleByteFileViewerTextEncoding,
   isValidFileViewerUtf8,
   resolveFileViewerTextEncoding,
   readFileViewerBuffer,
@@ -342,6 +346,7 @@ export {
 export type {
   DecodedFileViewerText,
   FileViewerReadResult,
+  FileViewerSingleByteTextEncoding,
   FileViewerTextEncoding,
   ResolvedFileViewerTextEncoding,
   ResolvedFileViewerTextSource,
@@ -595,6 +600,8 @@ export type {
   NormalizedFileViewerSource,
   RenderSurface,
   RendererCapability,
+  RendererSourceTypeProbe,
+  RendererSourceTypeProbeInput,
   RendererDefinition,
   RendererLoadContext,
   RendererLoader,

@@ -9,6 +9,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const sourceRoot = resolve(packageDir, '../../..')
+const currentVite = JSON.parse(await readFile(join(packageDir, 'package.json'), 'utf8')).devDependencies.vite
+assert.match(currentVite, /^8\.\d+\.\d+$/, 'The Vite 8 consumer must use the exact reviewed workspace release')
 const work = await realpath(await mkdtemp(join(tmpdir(), 'file-viewer-257-browser-')))
 const output = resolve(sourceRoot, 'output/vite-copy-github-257')
 const require = createRequire(import.meta.url)
@@ -71,7 +73,7 @@ try {
     // replaced. No monorepo resolver or renderer override can hide path errors.
     await json(join(app, 'package.json'), {
       name: `issue-257-vite-${major}`, private: true, type: 'module',
-      dependencies: { '@file-viewer/vue3-full': '3.0.2', '@file-viewer/vite-plugin': `file:${tarball}`, vue: '3.5.42', vite: major === 6 ? '6.4.3' : '8.2.2' }
+      dependencies: { '@file-viewer/vue3-full': '3.0.2', '@file-viewer/vite-plugin': `file:${tarball}`, vue: '3.5.42', vite: major === 6 ? '6.4.3' : currentVite }
     })
     await json(join(app, 'preview/package.json'), { name: 'nested-preview', private: true, type: 'module' })
     await file(join(app, 'preview/index.html'), '<!doctype html><html><head><meta charset="utf-8"></head><body><div id="app"></div><script type="module" src="./main.js"></script></body></html>')

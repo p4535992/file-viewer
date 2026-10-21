@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const vendoredRuntime = [
-  ['libwpd.mjs', 'be29b0bac887007ca9adc012c3122bb84964de2dd11d9500e8e9b03feb8939f2'],
-  ['libwpd.wasm', '51db45b3bec05b72b2f6ff82c5ed3e715916e61a7a2f153df0644e10d75e6b8c'],
+  ['libwpd.mjs', 'ccd3267ce9cac2961bb6a500761753efa05c93563e7a5e46a31594cceb5e3096'],
+  ['libwpd.wasm', 'bbfe0c7f712a357e3f9d11f9cf96d931e7cf4b9165d4379af78bf1bcb69333f0'],
 ]
 
 for (const [filename, expectedHash] of vendoredRuntime) {

@@ -126,7 +126,7 @@ const githubUrl = 'https://github.com/flyfish-dev/file-viewer'
 const githubApiUrl = 'https://api.github.com/repos/flyfish-dev/file-viewer'
 const githubStarCountFallback = 1900
 const releasesUrl = 'https://github.com/flyfish-dev/file-viewer/releases'
-const currentReleaseVersion = '3.1.2'
+const currentReleaseVersion = '3.2.2'
 const currentReleaseUrl = `${releasesUrl}/tag/v${currentReleaseVersion}`
 const registeredExtensionCount = FORMAT_CATALOG_SUMMARY.registeredExtensionCount
 const stableExtensionCount = FORMAT_CATALOG_SUMMARY.stableExtensionCount
@@ -2299,7 +2299,11 @@ onBeforeUnmount(() => {
           <p class="section-kicker">Native components</p>
           <h2 id="ecosystem-title">{{ currentCopy.ecosystemTitle }}</h2>
           <p>{{ currentCopy.ecosystemIntro }}</p>
-          <div class="quickstart-tabs" role="tablist" aria-label="Ecosystem quick start examples">
+          <div
+            class="quickstart-tabs"
+            role="tablist"
+            :aria-label="isZh ? '选择框架接入示例' : 'Framework integration examples'"
+          >
             <button
               v-for="(item, index) in quickStartItems"
               :id="`quickstart-tab-${index}`"
@@ -2309,7 +2313,6 @@ onBeforeUnmount(() => {
                 `quickstart-tab-${item.tone}`,
                 { 'is-active': index === activeQuickStartIndex }
               ]"
-              :style="{ transitionDelay: `${index * 55}ms` }"
               type="button"
               role="tab"
               :aria-selected="index === activeQuickStartIndex"
@@ -2359,7 +2362,10 @@ onBeforeUnmount(() => {
                 <span />
                 <strong>{{ item.language }}</strong>
               </div>
-              <pre><code
+              <pre
+                tabindex="0"
+                :aria-label="`${item.label} ${isZh ? '代码示例' : 'code example'}`"
+              ><code
               class="hljs"
               :class="`language-${item.highlightLanguage}`"
               v-html="highlightSnippet(item.code, item.highlightLanguage)"
@@ -2369,13 +2375,19 @@ onBeforeUnmount(() => {
 
           <div class="quickstart-footer">
             <span>{{ activeQuickStart.summary }}</span>
-            <div class="quickstart-dots" aria-label="Quick start slides">
+            <div
+              class="quickstart-dots"
+              role="group"
+              :aria-label="isZh ? '切换接入示例' : 'Switch integration example'"
+            >
               <button
                 v-for="(item, index) in quickStartItems"
                 :key="`dot-${item.packageName}`"
                 type="button"
                 :class="{ 'is-active': index === activeQuickStartIndex }"
                 :aria-label="`${isZh ? '切换到' : 'Show'} ${item.label}`"
+                :aria-pressed="index === activeQuickStartIndex"
+                :aria-controls="`quickstart-panel-${index}`"
                 @click="selectQuickStart(index)"
               />
             </div>

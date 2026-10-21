@@ -23,17 +23,19 @@ const resolveJsSpecifier = (fileDir, specifier) => {
   return existsSync(indexCandidate) ? `${specifier}/index.js` : specifier;
 };
 
-async function collectJsFiles(dir) {
+async function collectModuleFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   const files = [];
 
   for (const entry of entries) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...await collectJsFiles(path));
+      files.push(...await collectModuleFiles(path));
       continue;
     }
-    if (entry.isFile() && extname(entry.name) === '.js') {
+    // Declarations use the same ESM module specifiers as the runtime files.
+    // NodeNext consumers resolve .js specifiers to their adjacent .d.ts files.
+    if (entry.isFile() && (extname(entry.name) === '.js' || entry.name.endsWith('.d.ts'))) {
       files.push(path);
     }
   }
@@ -43,7 +45,7 @@ async function collectJsFiles(dir) {
 
 let changedCount = 0;
 
-for (const file of await collectJsFiles(distDir)) {
+for (const file of await collectModuleFiles(distDir)) {
   const source = await readFile(file, 'utf8');
   const fileDir = dirname(file);
   const fixed = source.replace(relativeSpecifierPattern, (_match, prefix, specifier, suffix) => {

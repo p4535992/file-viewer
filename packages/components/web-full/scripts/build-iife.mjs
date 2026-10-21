@@ -1,11 +1,14 @@
 import { existsSync } from 'node:fs'
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
-import { dirname, join, relative, resolve } from 'node:path'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
-import { sanitizeOfflineViewerAssetTree } from './offline-asset-sanitize.mjs'
-import { verifyPptRuntimeDistributionRoot } from './ppt-runtime-integrity.mjs'
+import { stageFullViewerAssets } from './stage-full-assets.mjs'
 import { isolateAmd, writeAmdEntry } from '../../web/scripts/amd-entry.mjs'
+import * as webNode from '@file-viewer/web/node'
+import { writeBundleNotices } from '../../../build-support/bundle-notices.mjs'
+import { appendCadIntegrationSourceNotice } from '../../../build-support/cad-source-offer.mjs'
+import { writeBundleInventory } from '../../../build-support/bundle-inventory.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const packageManifest = JSON.parse(await readFile(resolve(packageDir, 'package.json'), 'utf8'))
@@ -33,9 +36,24 @@ const prettierIifeAliases = Object.fromEntries(
   ].map((specifier) => [specifier, prettierIifeStub])
 )
 const outDir = join(packageDir, 'dist')
+const previousAssetManifestPath = join(outDir, webNode.VIEWER_ASSET_MANIFEST_FILENAME)
+const previousAssetManifest = existsSync(previousAssetManifestPath)
+  ? JSON.parse(await readFile(previousAssetManifestPath, 'utf8')) : null
 const fileName = 'flyfish-file-viewer-web-full.iife.js'
 const rendererOutDir = join(outDir, 'renderers')
 const generatedDir = join(packageDir, '.generated-iife-renderers')
+const bundledInputs = new Set()
+const bundleInventoryPlugin = () => ({
+  name: 'file-viewer-full-bundle-input-inventory',
+  generateBundle(_options, bundle) {
+    for (const output of Object.values(bundle)) {
+      if (output.type !== 'chunk') continue
+      for (const id of Object.keys(output.modules)) {
+        if (isAbsolute(id) && !id.startsWith('\0')) bundledInputs.add(id.split('?')[0])
+      }
+    }
+  }
+})
 
 const rendererBuilds = [
   { key: 'word', packageName: '@file-viewer/renderer-word', exportName: 'wordRenderer', globalName: 'FlyfishFileViewerWebFullRendererWord' },
@@ -81,7 +99,10 @@ await build({
   configFile: false,
   publicDir: false,
   logLevel: 'warn',
+  plugins: [bundleInventoryPlugin()],
+  worker: { plugins: () => [bundleInventoryPlugin()] },
   define: {
+    '__FILE_VIEWER_WEB_FULL_VERSION__': JSON.stringify(packageManifest.version),
     'process.env.NODE_ENV': JSON.stringify('production'),
     'process.env': JSON.stringify({ NODE_ENV: 'production' }),
     'import.meta.url': 'document.currentScript?.src || location.href'
@@ -140,6 +161,8 @@ bucket[renderer.id] = renderer
     configFile: false,
     publicDir: false,
     logLevel: 'warn',
+    plugins: [bundleInventoryPlugin()],
+    worker: { plugins: () => [bundleInventoryPlugin()] },
     define: {
       'process.env.NODE_ENV': JSON.stringify('production'),
       'process.env': JSON.stringify({ NODE_ENV: 'production' }),
@@ -176,56 +199,17 @@ bucket[renderer.id] = renderer
   })
 }
 
+await writeBundleInventory([...bundledInputs], join(packageDir, '.build/iife-inputs.json'))
+await writeBundleNotices(
+  { inputs: Object.fromEntries([...bundledInputs].map(id => [id, {}])) },
+  join(outDir, 'THIRD_PARTY_LICENSES.txt'),
+  { readmeLicensePackages: ['@ljheee/xmind-parser'], includeWorkspacePackages: ['@file-viewer/doc'], includePrebundledSdkPackages: ['@file-viewer/capability-mermaid'] }
+)
+await appendCadIntegrationSourceNotice(join(outDir, 'THIRD_PARTY_LICENSES.txt'), packageManifest.version)
+
 await rm(generatedDir, { recursive: true, force: true })
 
-const assetSourceCandidates = [
-  resolve(packageDir, '..', 'web', 'viewer'),
-  resolve(packageDir, '..', '..', 'compat', 'web', 'viewer'),
-  resolve(packageDir, '..', '..', '..', 'apps', 'viewer-demo', 'dist'),
-  // A fresh public-source checkout has no generated viewer/demo dist yet. The
-  // tracked offline assets are the canonical bootstrap source for that build.
-  resolve(packageDir, '..', '..', '..', 'apps', 'viewer-demo', 'public')
-]
-const assetSource = assetSourceCandidates.find(candidate =>
-  existsSync(resolve(candidate, 'flyfish-viewer-assets.json')) ||
-  existsSync(resolve(candidate, 'vendor')) ||
-  existsSync(resolve(candidate, 'wasm'))
-)
-
-if (assetSource) {
-  for (const entry of [
-    'vendor',
-    'wasm',
-    'flyfish-viewer-assets.json',
-    'flyfish-viewer-manifest.json'
-  ]) {
-    const sourcePath = resolve(assetSource, entry)
-    if (!existsSync(sourcePath)) {
-      continue
-    }
-    const targetPath = resolve(outDir, entry)
-    await rm(targetPath, { recursive: true, force: true })
-    await cp(sourcePath, targetPath, { recursive: true })
-  }
-  await writeFile(
-    resolve(outDir, 'flyfish-viewer-manifest.json'),
-    `${JSON.stringify({
-      name: packageManifest.name,
-      version: packageManifest.version,
-      kind: 'viewer-assets',
-      assets: 'flyfish-viewer-assets.json'
-    }, null, 2)}\n`,
-    'utf8'
-  )
-  console.log(`[web-full-iife] Copied viewer assets from ${assetSource}`)
-} else {
-  console.warn('[web-full-iife] Viewer assets were not copied. Run pnpm build:viewer-assets before publishing the full CDN package.')
-}
-
-const sanitization = await sanitizeOfflineViewerAssetTree(outDir)
-await verifyPptRuntimeDistributionRoot(outDir, {
-  unbundledJavaScriptPath: 'renderers/presentation.iife.js'
-})
+const { sanitization } = await stageFullViewerAssets({ packageDir, outDir, packageManifest, webNode, previousAssetManifest })
 console.log(
   `[web-full-iife] Sanitized ${sanitization.checkedFiles} shipped text assets; ` +
   `replaced ${sanitization.replacementCount} public runtime fallback markers in ` +

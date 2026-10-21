@@ -1,3 +1,5 @@
+import { installPdfHandTool } from './pdfHandTool.js';
+import { scrollPdfPageWithinContainer } from './pdfPageScroll.js';
 import {
   getDocument,
   GlobalWorkerOptions,
@@ -68,6 +70,7 @@ import {
 import {
   clampPdfScale,
   normalizePdfRotation,
+  resolvePdfPageRotation,
   resolvePdfViewStateUpdate,
 } from './pdfViewState.js';
 import {
@@ -75,7 +78,8 @@ import {
   scopePdfJsWorkerMessageHandler,
   type PdfJsWorkerGlobal,
 } from './pdfWorkerGlobal.js';
-import { readPdfJsWorkerVersion } from './pdfWorkerVersion.js';
+import { hasNativePdfWorkerPort, isPdfWorkerVersionMismatch } from './pdfWorkerProbe.js';
+import { scopePdfJsWorkerHandlerCache } from './pdfWorkerCache.js';
 import { getFileViewerPdfIdentityFontRepair } from './optionalCapabilities.js';
 import { isExpectedPdfJsDestroyConsoleError } from './pdfConsoleLifecycle.js';
 
@@ -86,18 +90,12 @@ const MIN_SCALE = 0.2;
 const MAX_SCALE = 3;
 const SCALE_STEP = 0.1;
 const PDF_EXPORT_MAX_PAGE_PIXELS = 8_000_000;
-const PDF_WORKER_PROBE_TIMEOUT_MS = 1200;
-const PDF_WORKER_VERSION_PROBE_BYTES = 4096;
 const PDF_JS_DESTROY_CONSOLE_SUPPRESSION_MS = 1500;
 
 type PdfWorkerHandlerModule = {
   WorkerMessageHandler: unknown;
 };
 
-type PdfWorkerProbeResult = {
-  status: 'compatible' | 'incompatible' | 'unknown' | 'unavailable';
-  workerVersion: string | null;
-};
 
 let bundledPdfWorkerModulePromise: Promise<PdfWorkerHandlerModule> | null = null;
 
@@ -124,6 +122,7 @@ type PdfWorkerInstance = InstanceType<typeof PdfJsWorker>;
 type PdfResource = {
   loadingTask: PdfLoadingTask;
   worker: PdfWorkerInstance | null;
+  fallbackSource?: PdfLoadingSource;
 };
 type PdfLoadingSource =
   | { data: ArrayBuffer | Uint8Array }
@@ -396,25 +395,6 @@ const isConfiguredUrl = (value: string | URL | undefined) => {
   return value !== undefined && value !== null && String(value).trim().length > 0;
 };
 
-const isJavaScriptLikeResponse = (response: Response) => {
-  const contentType = response.headers.get('content-type')?.toLowerCase() || '';
-  return !contentType ||
-    contentType.includes('javascript') ||
-    contentType.includes('ecmascript') ||
-    contentType.includes('application/octet-stream') ||
-    contentType.includes('text/plain');
-};
-
-const readResponsePrefix = async (
-  response: Response,
-  maximumBytes = PDF_WORKER_VERSION_PROBE_BYTES
-) => {
-  // Consume the response even when a server ignores Range. Cancelling after the
-  // prefix creates a browser-level ERR_ABORTED event that strict hosts treat as
-  // a failed asset request, despite the compatibility probe succeeding.
-  return (await response.text()).slice(0, maximumBytes);
-};
-
 const loadBundledPdfWorkerModule = async () => {
   bundledPdfWorkerModulePromise ??= import('pdfjs-dist/legacy/build/pdf.worker.mjs') as Promise<PdfWorkerHandlerModule>;
   return bundledPdfWorkerModulePromise;
@@ -431,14 +411,20 @@ const createBundledPdfFakeWorker = async () => {
     workerModule.WorkerMessageHandler,
     hostWorkerGlobal
   );
+  let workerCacheScope: ReturnType<typeof scopePdfJsWorkerHandlerCache> | undefined;
   try {
+    workerCacheScope = scopePdfJsWorkerHandlerCache(PdfJsWorker, workerModule.WorkerMessageHandler);
     const worker = new PdfJsWorker({
       name: 'file-viewer-pdf-worker',
     } as ConstructorParameters<typeof PdfJsWorker>[0] & { name: string }) as PdfWorkerInstance;
     await worker.promise;
     return worker;
   } finally {
-    workerHandlerScope.restore();
+    try {
+      workerCacheScope?.restore();
+    } finally {
+      workerHandlerScope.restore();
+    }
   }
 };
 
@@ -514,6 +500,7 @@ export default async function renderPdf(
   let fitFrame = 0;
   let pageDimensionFrame = 0;
   let destroyed = false;
+  const unverifiedWorkers = new WeakSet<PdfWorkerInstance>();
   let loadVersion = 0;
   let viewStateApplyVersion = 0;
   let activeViewStateApplyVersion = 0;
@@ -638,6 +625,9 @@ export default async function renderPdf(
     root.insertBefore(toolbar, content);
   }
   target.replaceChildren(createStyle(documentRef), root);
+  const disposeHandTool = context?.options?.pdf?.handTool === true
+    ? installPdfHandTool(container)
+    : () => {};
 
   const scaleText = () => `${Math.round(currentScale * 100)}%`;
   const rotationText = () => `${currentRotation}°`;
@@ -767,14 +757,14 @@ export default async function renderPdf(
 
       const baseViewport = page.getViewport({
         scale: PixelsPerInch.PDF_TO_CSS_UNITS,
-        rotation: currentRotation,
+        rotation: resolvePdfPageRotation(page.rotate, currentRotation),
       });
       const deviceScale = Math.min(2, Math.max(1, targetWindow.devicePixelRatio || 1));
       const thumbnailWidth = 46;
       const ratio = Math.min(1, thumbnailWidth / Math.max(baseViewport.width, 1));
       const renderViewport = page.getViewport({
         scale: PixelsPerInch.PDF_TO_CSS_UNITS * ratio * deviceScale,
-        rotation: currentRotation,
+        rotation: resolvePdfPageRotation(page.rotate, currentRotation),
       });
       const canvas = documentRef.createElement('canvas');
       const canvasContext = canvas.getContext('2d');
@@ -815,12 +805,12 @@ export default async function renderPdf(
     }
     const page = await pdfDocument.getPage(1);
     await ensurePdfPageCjkFontFallback(1, page as unknown as PdfTextContentPage);
-    const baseViewport = page.getViewport({ scale: 1, rotation: currentRotation });
+    const baseViewport = page.getViewport({ scale: 1, rotation: resolvePdfPageRotation(page.rotate, currentRotation) });
     const scale = Math.max(0.1, Math.min(
       captureOptions.width / Math.max(baseViewport.width, 1),
       captureOptions.height / Math.max(baseViewport.height, 1)
     ));
-    const viewport = page.getViewport({ scale, rotation: currentRotation });
+    const viewport = page.getViewport({ scale, rotation: resolvePdfPageRotation(page.rotate, currentRotation) });
     const canvas = documentRef.createElement('canvas');
     const canvasContext = canvas.getContext('2d');
     if (!canvasContext) {
@@ -962,57 +952,6 @@ export default async function renderPdf(
     });
   };
 
-  const probeResolvedPdfWorkerUrl = async (
-    workerUrl: string
-  ): Promise<PdfWorkerProbeResult> => {
-    const fetcher = targetWindow.fetch?.bind(targetWindow) || globalThis.fetch?.bind(globalThis);
-    const AbortControllerCtor = targetWindow.AbortController || globalThis.AbortController;
-    if (!fetcher || !AbortControllerCtor) {
-      return { status: 'unavailable', workerVersion: null };
-    }
-
-    try {
-      const parsed = new URL(workerUrl, documentRef.baseURI || targetWindow.location.href);
-      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-        return { status: 'unavailable', workerVersion: null };
-      }
-    } catch {
-      return { status: 'unavailable', workerVersion: null };
-    }
-
-    const controller = new AbortControllerCtor();
-    const timer = targetWindow.setTimeout(() => controller.abort(), PDF_WORKER_PROBE_TIMEOUT_MS);
-    try {
-      const response = await fetcher(workerUrl, {
-        method: 'GET',
-        // A successful range probe must never seed the HTTP cache for the
-        // subsequent module Worker request. Some static servers correctly
-        // return 206 here, and Chromium can otherwise reuse that partial body
-        // as the Worker module, which fails with "Invalid or unexpected token".
-        cache: 'no-store',
-        headers: {
-          Range: `bytes=0-${PDF_WORKER_VERSION_PROBE_BYTES - 1}`,
-        },
-        signal: controller.signal,
-      });
-      if ((!response.ok && response.status !== 206) || !isJavaScriptLikeResponse(response)) {
-        return { status: 'unavailable', workerVersion: null };
-      }
-      const workerVersion = readPdfJsWorkerVersion(await readResponsePrefix(response));
-      if (!workerVersion) {
-        return { status: 'unknown', workerVersion: null };
-      }
-      return {
-        status: workerVersion === pdfJsVersion ? 'compatible' : 'incompatible',
-        workerVersion,
-      };
-    } catch {
-      return { status: 'unavailable', workerVersion: null };
-    } finally {
-      targetWindow.clearTimeout(timer);
-    }
-  };
-
   const createPdfWorker = async () => {
     const workerUrl = resolvePdfWorkerUrl(options, pdfRuntimeAssetBaseUrl);
     const workerGlobal = globalThis as PdfJsWorkerGlobal;
@@ -1028,28 +967,15 @@ export default async function renderPdf(
       }
     }
 
-    const hasExplicitWorkerUrl = isConfiguredUrl(options?.workerUrl);
-    const workerProbe = targetWindow?.Worker
-      ? await probeResolvedPdfWorkerUrl(workerUrl)
-      : { status: 'unavailable' as const, workerVersion: null };
-    if (workerProbe.status === 'incompatible') {
-      console.warn(
-        `[file-viewer] PDF Worker ${workerProbe.workerVersion} 与 PDF.js API ${pdfJsVersion} 不匹配，` +
-        '改用包内同版本 PDF.js handler。'
-      );
-    }
-    const shouldUseRealWorker = !!targetWindow?.Worker && (
-      workerProbe.status === 'compatible' ||
-      (hasExplicitWorkerUrl && workerProbe.status === 'unknown')
-    );
-
-    if (shouldUseRealWorker) {
+    if (targetWindow.Worker) {
       GlobalWorkerOptions.workerSrc = workerUrl;
       try {
         const worker = new PdfJsWorker({
           name: 'file-viewer-pdf-worker',
         } as ConstructorParameters<typeof PdfJsWorker>[0] & { name: string }) as PdfWorkerInstance;
         await worker.promise;
+        // GetDocRequest validates the API version before parsing, without a duplicate Range fetch.
+        unverifiedWorkers.add(worker);
         return worker;
       } catch (error) {
         console.warn('[file-viewer] PDF Worker 初始化失败，改用包内 PDF.js 兜底。', error);
@@ -1316,6 +1242,7 @@ export default async function renderPdf(
     }
     autoFitWidth = false;
     activeFitRequest = null;
+    pendingFitRequest = null;
   };
 
   const getPdfPageElement = (pageNumber: number) => {
@@ -1590,7 +1517,7 @@ export default async function renderPdf(
     if (pdfPage) {
       const viewportAtScaleOne = pdfPage.getViewport({
         scale: PixelsPerInch.PDF_TO_CSS_UNITS,
-        rotation: currentRotation,
+        rotation: resolvePdfPageRotation(pdfPage.rotate, currentRotation),
       });
       return {
         width: viewportAtScaleOne.width,
@@ -1613,6 +1540,10 @@ export default async function renderPdf(
     return getPageSizeAtScaleOne(pdfViewer).width;
   };
 
+  // A detached/hidden dialog has no document viewport yet. A window-sized
+  // fallback would consume an initial-only fit before that dialog is shown.
+  const hasMeasurableViewport = () => container.clientWidth > 0 && container.clientHeight > 0;
+
   const getFitWidthScale = (pdfViewer: PDFViewer) => {
     const pageWidth = getPageWidthAtScaleOne(pdfViewer);
     const containerWidth = container.clientWidth || targetWindow.innerWidth;
@@ -1634,6 +1565,9 @@ export default async function renderPdf(
     userScrollIntentUntil = 0;
     suppressProgrammaticScrollEvents();
     autoFitWidth = true;
+    if (!hasMeasurableViewport()) {
+      return;
+    }
     setScale(getFitWidthScale(pdfContext.viewer), 'zoom-reset', source, notifyViewState);
     void waitForPaint(targetWindow).then(() => {
       pdfContext.viewer?.update();
@@ -1644,8 +1578,8 @@ export default async function renderPdf(
     cancelPendingUserZoomRestore();
     userScrollIntentUntil = 0;
     activeFitRequest = { ...request };
-    if (!pdfContext.viewer || loadStatus !== 'ready') {
-      pendingFitRequest = request;
+    if (!pdfContext.viewer || loadStatus !== 'ready' || !hasMeasurableViewport()) {
+      pendingFitRequest = { ...request };
       return {
         applied: false,
         mode: request.mode,
@@ -1656,6 +1590,7 @@ export default async function renderPdf(
       };
     }
 
+    pendingFitRequest = null;
     const pageSize = getPageSizeAtScaleOne(pdfContext.viewer);
     const mode = request.mode === 'auto' ? 'width' : request.mode;
     const fitViewport = resolvePdfFitViewportSize({
@@ -1714,10 +1649,10 @@ export default async function renderPdf(
   };
 
   const scheduleFitAfterResize = () => {
-    if (!pdfContext.viewer) {
+    if (destroyed || !pdfContext.viewer || !hasMeasurableViewport()) {
       return;
     }
-    if (activeFitRequest?.resize === 'initial') {
+    if (activeFitRequest?.resize === 'initial' && !pendingFitRequest) {
       return;
     }
     if (!activeFitRequest && !autoFitWidth) {
@@ -1725,6 +1660,10 @@ export default async function renderPdf(
     }
     targetWindow.cancelAnimationFrame(fitFrame);
     fitFrame = targetWindow.requestAnimationFrame(() => {
+      fitFrame = 0;
+      if (destroyed || !hasMeasurableViewport()) {
+        return;
+      }
       if (activeFitRequest) {
         void applyPdfFit({ ...activeFitRequest, source: 'viewer' });
         return;
@@ -1871,6 +1810,9 @@ export default async function renderPdf(
     const nextPage = Math.min(pageCount, Math.max(1, pageNumber));
     runWithStableHorizontalScroll(() => {
       pdfContext.viewer!.currentPageNumber = nextPage;
+      const page = pdfContext.viewer!.getPageView(nextPage - 1)?.div
+        || pdfViewerRoot.querySelector<HTMLElement>(`.page[data-page-number="${nextPage}"]`);
+      if (scrollPdfPageWithinContainer(container, page)) pdfContext.viewer!.update();
       currentPage = nextPage;
       syncUi();
       if (notifyViewState) {
@@ -1982,19 +1924,26 @@ export default async function renderPdf(
     const page = await pdfDocument.getPage(Math.min(Math.max(pageNumber, 1), pdfDocument.numPages));
     const viewport = page.getViewport({
       scale: PixelsPerInch.PDF_TO_CSS_UNITS,
-      rotation: currentRotation,
+      rotation: resolvePdfPageRotation(page.rotate, currentRotation),
     });
     (page as { cleanup?: () => void }).cleanup?.();
     return {
-      width: Math.ceil(viewport.width),
-      height: Math.ceil(viewport.height),
+      width: viewport.width,
+      height: viewport.height,
     };
   };
 
   const buildPdfPrintStyle = async () => {
-    const size = await getPdfPrintPageSize();
+    const sizes = [];
+    const count = pdfContext.document?.numPages || 1;
+    for (let number = 1; number <= count; number += 1) {
+      if (destroyed) throw new Error(t('pdf.error.unloaded'));
+      sizes.push(await getPdfPrintPageSize(number));
+    }
+    const size = sizes[0];
     return buildPrintPageStyle({
       selector: '.viewer-export-content .pdf-export-page',
+      pages: sizes,
       width: size.width,
       height: size.height,
     });
@@ -2019,14 +1968,15 @@ export default async function renderPdf(
       );
       const baseViewport = page.getViewport({
         scale: PixelsPerInch.PDF_TO_CSS_UNITS,
-        rotation: currentRotation,
+        rotation: resolvePdfPageRotation(page.rotate, currentRotation),
       });
-      const pageWidth = Math.ceil(baseViewport.width);
-      const pageHeight = Math.ceil(baseViewport.height);
+      // Raster dimensions are rounded below; physical paper geometry must not be.
+      const pageWidth = baseViewport.width;
+      const pageHeight = baseViewport.height;
       const exportRatio = getPdfExportRatio(baseViewport.width, baseViewport.height, exportOptions.mode);
       const renderViewport = page.getViewport({
         scale: PixelsPerInch.PDF_TO_CSS_UNITS * exportRatio,
-        rotation: currentRotation,
+        rotation: resolvePdfPageRotation(page.rotate, currentRotation),
       });
       const canvas = documentRef.createElement('canvas');
       const canvasContext = canvas.getContext('2d');
@@ -2224,27 +2174,56 @@ export default async function renderPdf(
           };
 
       const createLoadingResource = async (
-        loadingSource: PdfLoadingSource
+        loadingSource: PdfLoadingSource,
+        bundledFallback = false
       ): Promise<PdfResource> => {
-        const worker = await createPdfWorker();
+        const worker = bundledFallback ? await createBundledPdfFakeWorker() : await createPdfWorker();
+        // PDF.js transfers data buffers. Keep a retry copy only while a Worker
+        // whose version could not be preflighted establishes its document API.
+        const fallbackSource = worker && unverifiedWorkers.has(worker)
+          ? ('data' in loadingSource ? { data: loadingSource.data.slice(0) } : loadingSource)
+          : undefined;
         const loadingTask = getDocument({
           ...loadingSource,
           worker: worker || undefined,
           cMapUrl: pdfAssets.cMapUrl,
           wasmUrl: pdfAssets.wasmUrl,
           standardFontDataUrl: pdfAssets.standardFontDataUrl,
-          useWorkerFetch: true,
+          // The main-thread fallback cannot use PDF.js's synchronous ICC fetch.
+          useWorkerFetch: hasNativePdfWorkerPort(worker?.port, [globalThis.Worker, targetWindow.Worker]),
           cMapPacked: true,
           enableXfa: true,
           fontExtraProperties: fontInspectionEnabled,
         });
-        return { loadingTask, worker };
+        return { loadingTask, worker, fallbackSource };
+      };
+
+      const resolveLoadingDocument = async (currentResource: PdfResource) => {
+        try {
+          return await currentResource.loadingTask.promise;
+        } catch (error) {
+          const retrySource = currentResource.fallbackSource;
+          if (!retrySource || !isPdfWorkerVersionMismatch(error, pdfJsVersion) ||
+              destroyed || requestVersion !== loadVersion) throw error;
+          console.warn(`[file-viewer] PDF Worker 版本不匹配，改用包内同版本 PDF.js ${pdfJsVersion}。`);
+          await destroyPdfResource(currentResource);
+          if (destroyed || requestVersion !== loadVersion) throw error;
+          const replacement = await createLoadingResource(retrySource, true);
+          Object.assign(currentResource, replacement);
+          if (destroyed || requestVersion !== loadVersion) {
+            await destroyPdfResource(currentResource);
+            throw error;
+          }
+          return await currentResource.loadingTask.promise;
+        } finally {
+          delete currentResource.fallbackSource;
+        }
       };
 
       resource = await createLoadingResource(source);
       pdfContext.resource = resource;
 
-      let pdfDocument = await resource.loadingTask.promise;
+      let pdfDocument = await resolveLoadingDocument(resource);
       if (destroyed || requestVersion !== loadVersion || pdfContext.resource !== resource) {
         if (pdfContext.resource === resource) {
           pdfContext.resource = null;
@@ -2295,7 +2274,7 @@ export default async function renderPdf(
             if (repaired.repairedFonts > 0) {
               const previousResource = resource;
               replacementResource = await createLoadingResource({ data: repaired.bytes });
-              const replacementDocument = await replacementResource.loadingTask.promise;
+              const replacementDocument = await resolveLoadingDocument(replacementResource);
               const repairedFirstPage = await replacementDocument.getPage(1);
               const replacementTextContent = await (
                 repairedFirstPage as unknown as PdfTextContentPage
@@ -2432,6 +2411,7 @@ export default async function renderPdf(
   zoomInButton.addEventListener('click', () => zoomIn('user'));
   scaleButton.addEventListener('click', () => {
     activeFitRequest = null;
+    pendingFitRequest = null;
     fitToWidth('user');
   });
   rotateLeftButton.addEventListener('click', () => applyRotation(currentRotation - 90, 'rotate-left', 'user'));
@@ -2463,6 +2443,7 @@ export default async function renderPdf(
     $el: root,
     unmount() {
       destroyed = true;
+      disposeHandTool();
       loadVersion += 1;
       restorePdfJsMissingSystemFontWarnings();
       restorePdfJsMissingSystemFontWarnings = () => {};

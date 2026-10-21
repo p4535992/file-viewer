@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/capability-pdf-identity-repair",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Opt-in malformed Identity CJK font repair for the File Viewer PDF renderer.",
@@ -26,11 +26,11 @@
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/renderer-pdf": "workspace:3.1.2",
-    "pdf-lib": "1.17.1"
+    "@file-viewer/renderer-pdf": "workspace:3.2.2"
   },
   "devDependencies": {
     "esbuild": "^0.28.2",
+    "pdf-lib": "1.17.1",
     "typescript": "^6.0.3"
   },
   "fileViewer": {

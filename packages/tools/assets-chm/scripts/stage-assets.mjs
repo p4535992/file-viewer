@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { copyFile, mkdir } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { stageSharedAssetAttribution } from '../../../build-support/shared-asset-attribution.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const sourceRoot = resolve(packageDir, '../../..')
@@ -34,5 +35,8 @@ for (const [source, target] of notices) {
 for (const filename of ['chm.worker.js', 'chm_wasm.js', 'chm_wasm_bg.wasm']) {
   await copyFile(resolve(rendererDir, 'dist', filename), resolve(vendorDir, filename))
 }
+
+// CHM adds its canonical runtime and notices after the generic asset staging.
+await stageSharedAssetAttribution(resolve(packageDir, 'viewer'))
 
 console.log(`[assets-chm] staged ${notices.length} required license documents with the Worker/WASM payload`)

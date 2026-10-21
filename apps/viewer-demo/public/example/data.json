@@ -1,14 +1,14 @@
 {
   "name": "file-viewer",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "environment": {
     "framework": "vue3",
     "viewerSite": "https://demo.file-viewer.app",
     "docs": "https://doc.file-viewer.app"
   },
   "packages": {
-    "vue3": "@file-viewer/vue3@3.1.2",
-    "vue2": "@file-viewer/vue2.7@3.1.2"
+    "vue3": "@file-viewer/vue3@3.2.2",
+    "vue2": "@file-viewer/vue2.7@3.2.2"
   },
   "features": [
     {
@@ -32,7 +32,7 @@
       "lazyLoaded": true,
       "defaultScale": "fit-width",
       "presentationRoutes": {
-        "ppt": "@file-viewer/ppt@0.3.4",
+        "ppt": "@file-viewer/ppt@0.3.6",
         "pptx": "@file-viewer/pptx"
       }
     },
@@ -152,5 +152,5 @@
     "build": true,
     "browserSmoke": ["sample-picker", "code-preview", "pdf-toolbar"]
   },
-  "updatedAt": "2026-07-17T00:00:00+08:00"
+  "updatedAt": "2026-10-14"
 }

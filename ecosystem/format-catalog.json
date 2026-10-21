@@ -469,11 +469,11 @@
       "category": "code",
       "packageName": "@file-viewer/renderer-text",
       "preset": ["lite", "standard", "all"],
-      "extensions": ["txt", "json", "js", "mjs", "cjs", "css", "java", "py", "html", "htm", "jsx", "ts", "tsx", "xml", "log", "vue", "yaml", "yml", "ini", "sh", "bash", "sql", "go", "rs", "php", "c", "cpp", "cc", "h", "hpp", "cs", "diff", "patch", "bundle", "bdl", "jsonc", "json5", "ipynb", "toml", "proto", "hcl", "tex", "gv", "http", "react", "rb", "swift", "kt"],
+      "extensions": ["txt", "lrc", "json", "js", "mjs", "cjs", "css", "java", "py", "html", "htm", "jsx", "ts", "tsx", "xml", "log", "vue", "yaml", "yml", "ini", "sh", "bash", "sql", "go", "rs", "php", "c", "cpp", "cc", "h", "hpp", "cs", "diff", "patch", "bundle", "bdl", "jsonc", "json5", "ipynb", "toml", "proto", "hcl", "tex", "gv", "http", "react", "rb", "swift", "kt"],
       "supportLevel": "structured",
       "status": "stable",
-      "containerVersions": ["Plain text", "source code", "Git bundle"],
-      "knownLimits": [],
+      "containerVersions": ["Plain text", "source code", "Git bundle", "LRC lyrics"],
+      "knownLimits": ["LRC is a static annotated/lyrics/source preview, not synchronized audio playback"],
       "capabilities": { "download": true, "print": true, "exportHtml": true, "zoom": false, "search": true }
     },
     {
@@ -556,7 +556,7 @@
       "extensions": ["idml"],
       "supportLevel": "experimental",
       "status": "experimental",
-      "containerVersions": ["IDML package", "@paged-media/introspect-wasm 0.63.0"],
+      "containerVersions": ["IDML package", "@paged-media/introspect-wasm 0.70.2"],
       "knownLimits": [
         "Pages are rendered locally by the CPU WASM engine in a module Worker; the browser never uploads the IDML package",
         "ZIP64, encrypted, multi-disk, overlapping, unsafe-path, unsupported-compression, and configured expansion-limit packages are rejected before the WASM engine opens them",
@@ -649,7 +649,7 @@
       "containerVersions": ["EPSF/DSC PostScript", "Adobe PostScript programs"],
       "knownLimits": [
         "Stet WASM renders pages in a terminable Worker with latest-wins interactive requests and bounded source size, VM memory, page count, dimensions, pixels, DPI, total print working set, and retained canvas cache",
-        "The distributed runtime excludes upstream URW Base35 and Ghostscript CMYK ICC assets; Carlito, Tinos, Cousine, and Noto Sans Symbols 2 OFL substitutes plus the PLRM DeviceCMYK formula fallback can differ in metrics and color from Adobe applications",
+        "The unpatched Stet runtime embeds URW Base35 fonts under OFL-1.1 and the Compact ICC Profiles CGATS001Compat-v2-micro CMYK profile under CC0; document-specific fonts and print conditions can still differ from Adobe applications",
         "This experimental path is not claimed to implement every Adobe PostScript Level 3 operator, font technology, color-management workflow, or printer device"
       ],
       "capabilities": { "download": true, "print": true, "exportHtml": false, "zoom": true, "search": false }

@@ -42,8 +42,8 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      # The source lockfile predates jquery peer metadata in the opt-in wrapper.
-      # Resolve it in the runner, and publish the resulting lockfile for replay.
+      # The opt-in wrappers are branch-specific and add new workspace importers.
+      # Reconcile the lockfile in the runner and retain it for reproducibility.
       - name: Install dependencies and resolve workspace lockfile
         run: pnpm install --no-frozen-lockfile
 
@@ -239,6 +239,8 @@ jobs:
             schemaVersion: 1,
             resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
+            upstreamReleaseTag: 'v3.2.2',
+            upstreamRepository: 'flyfish-dev/file-viewer',
             sourceRepository: process.env.GITHUB_REPOSITORY,
             sourceRef: process.env.GITHUB_REF,
             sourceSha: process.env.GITHUB_SHA,
@@ -309,7 +311,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
-          RELEASE_TAG: v3.1.2-full-with-opts-in
+          RELEASE_TAG: v3.2.2-full-with-opts-in
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::Release $RELEASE_TAG already exists; refusing to overwrite it."
@@ -318,7 +320,7 @@ jobs:
 
           notes="$RUNNER_TEMP/full-with-opts-in-release-notes.md"
           cat > "$notes" <<EOF
-          ## File Viewer v3.1.2 — full-with-opts-in
+          ## File Viewer v3.2.2 — full-with-opts-in
 
           Built from branch build/web-full-with-opts-in at commit $GITHUB_SHA.
           The default branch is not modified.
@@ -344,7 +346,7 @@ jobs:
             "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "File Viewer v3.1.2 — full-with-opts-in" \
+            --title "File Viewer v3.2.2 — full-with-opts-in" \
             --notes-file "$notes" \
             --prerelease \
             --latest=false

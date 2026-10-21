@@ -1,0 +1,46 @@
+{
+  "bitfields@1.0.3": {
+    "kind": "retained-original-upstream-grant",
+    "independentLicenseFile": "absent",
+    "originalLicenseRecovered": true,
+    "declaredLicense": "MIT",
+    "sourceChecksum": "ef6e59298da389bc0649c7463856b34c6e17fe542f88939426ede4436c6b1195",
+    "packageMetadataSha256": "4fd5fcc6895cfb1ed12e9b7e4524cec23d207ab9770e4867e263f90be3387da9",
+    "sourceCommit": "a3c3d994c87c4f9cab566b3bbb5eb9bd1b2a9a98",
+    "path": "bitfields-1.0.3-NOTICE.txt",
+    "sha256": "472299717dc8d8e1f4f7fb5f3b549a0781c4248b83b591f55aaf424a456f443d"
+  },
+  "bitfields-impl@1.0.3": {
+    "kind": "retained-original-upstream-grant",
+    "independentLicenseFile": "absent",
+    "originalLicenseRecovered": true,
+    "declaredLicense": "MIT",
+    "sourceChecksum": "f2c044f98f86f15414668d6c8187c7e4fadab1ad2b31680f648703e0fe07c555",
+    "packageMetadataSha256": "fc2c5eb8eb7aa62a0a5a59c9ee2050dc4505eb61736d857c2030eaf0d0c5752a",
+    "sourceCommit": "a3c3d994c87c4f9cab566b3bbb5eb9bd1b2a9a98",
+    "path": "bitfields-impl-1.0.3-NOTICE.txt",
+    "sha256": "a79011e8f69ceadfdee7e0798948813658e00c168d445c3cab7a98fb8fa4c256"
+  },
+  "crc24@0.1.6": {
+    "kind": "verified-published-SPDX-declaration-notice",
+    "independentLicenseFile": "absent",
+    "originalLicenseRecovered": false,
+    "declaredLicense": "MIT/Apache-2.0",
+    "sourceChecksum": "fd121741cf3eb82c08dd3023eb55bf2665e5f60ec20f89760cf836ae4562e6a0",
+    "packageMetadataSha256": "1b417c059df1881472bf70e4654c9e5206a71314314831298ce732edbadb9260",
+    "sourceCommit": null,
+    "path": "crc24-0.1.6-NOTICE.txt",
+    "sha256": "5421488233b0c9b2413bc383d71bc3f1ed9d0e0b85177336515e1c70e8f35fbf"
+  },
+  "cx448@0.1.1": {
+    "kind": "verified-published-SPDX-declaration-with-retained-original-attribution",
+    "independentLicenseFile": "absent",
+    "originalLicenseRecovered": false,
+    "declaredLicense": "BSD-3-Clause",
+    "sourceChecksum": "b4c0cf476284b03eb6c10e78787b21c7abb7d7d43cb2f02532ba6b831ed892fa",
+    "packageMetadataSha256": "21231884978de4d1c8909259de20fbaf90babb3d6c319621a777366b2897e83c",
+    "sourceCommit": "58785c9ea154f646d03ccec4185f0a1ffa1c67e5",
+    "path": "cx448-0.1.1-NOTICE.txt",
+    "sha256": "96a60636ef8073a6a4bc8c716ff0632dbc2ab0a005b33c2784f7cfcc0da95ea6"
+  }
+}

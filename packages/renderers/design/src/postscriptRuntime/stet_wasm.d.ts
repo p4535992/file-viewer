@@ -33,21 +33,6 @@ export class Page {
     readonly width: number;
 }
 
-/**
- * Clear the page callback.
- */
-export function clear_page_callback(): void;
-
-/**
- * Apply browser safety limits before interpreting an untrusted program.
- *
- * The VM cap counts both local and global PostScript allocations. The owning
- * browser Worker remains the hard wall-clock boundary: `std::time::Instant`
- * is unavailable on `wasm32-unknown-unknown`, so the UI client terminates the
- * Worker when its budget expires.
- */
-export function configure_limits(interp: Interpreter, max_vm_bytes: number): void;
-
 export function create_interpreter(): Interpreter;
 
 /**
@@ -126,17 +111,23 @@ export function render_viewport(interp: Interpreter, page_index: number, vp_x: n
 export function render_viewport_band(interp: Interpreter, page_index: number, vp_x: number, vp_y: number, vp_w: number, vp_h: number, pixel_w: number, pixel_h: number, band_idx: number, band_h: number, num_bands: number): Page;
 
 /**
- * Register a JS callback for streaming render events.
+ * Set the ceiling on PostScript VM — strings, arrays, dictionaries — in bytes.
  *
- * The callback receives (event, arg1, arg2, arg3, data):
- *   event=0 (begin_page): arg1=index, arg2=width, arg3=height
- *   event=1 (rows): data=Uint8Array of RGBA band pixels
- *   event=2 (end_page): arg1=index
+ * The browser counterpart of the CLI's `--max-vm`: a program that would
+ * exceed it gets a `VMerror` it can catch, where an allocation the module
+ * cannot satisfy aborts it. The default is a quarter of the address space,
+ * which is 1 GiB here; a page embedding the viewer will usually want less.
  *
- * This streams bands directly to JS so WASM never holds a full page
- * in memory — critical at high DPI where a page can exceed 2 GB.
+ * A program can lower its own limit with `setuserparams` but cannot raise it
+ * past this.
+ *
+ * The interpreter's own start-up state counts against the ceiling, so a
+ * value below what `create_interpreter` has already allocated refuses every
+ * further allocation. The ceiling bounds PostScript VM only, not the
+ * renderer's image and band buffers, and holds for the life of the
+ * interpreter.
  */
-export function set_page_callback(callback: Function): void;
+export function set_max_vm(interp: Interpreter, max_bytes: number): void;
 
 /**
  * Resume PS interpretation up to the next `showpage`, appending any new
@@ -160,30 +151,26 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_interpreter_free: (a: number, b: number) => void;
     readonly __wbg_page_free: (a: number, b: number) => void;
-    readonly page_width: (a: number) => number;
-    readonly page_height: (a: number) => number;
-    readonly page_rgba: (a: number) => [number, number];
     readonly create_interpreter: () => number;
-    readonly configure_limits: (a: number, b: number) => void;
-    readonly set_page_callback: (a: any) => void;
-    readonly render: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
-    readonly step_ps_page: (a: number) => [number, number, number];
-    readonly ps_stream_active: (a: number) => number;
     readonly open_pdf: (a: number, b: number, c: number, d: number) => [number, number, number];
-    readonly render_pdf_page: (a: number, b: number) => [number, number];
     readonly page_count: (a: number) => number;
     readonly page_dimensions: (a: number, b: number) => any;
+    readonly page_height: (a: number) => number;
+    readonly page_rgba: (a: number) => [number, number];
+    readonly page_width: (a: number) => number;
+    readonly ps_stream_active: (a: number) => number;
     readonly reference_dpi: (a: number) => number;
+    readonly render: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
+    readonly render_pdf_page: (a: number, b: number) => [number, number];
     readonly render_viewport: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
-    readonly viewport_band_params: (a: number, b: number) => any;
     readonly render_viewport_band: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number) => [number, number, number];
-    readonly clear_page_callback: () => void;
-    readonly __wbindgen_exn_store: (a: number) => void;
-    readonly __externref_table_alloc: () => number;
-    readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly set_max_vm: (a: number, b: number) => void;
+    readonly step_ps_page: (a: number) => [number, number, number];
+    readonly viewport_band_params: (a: number, b: number) => any;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_start: () => void;
 }

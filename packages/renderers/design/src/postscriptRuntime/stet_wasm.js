@@ -75,28 +75,6 @@ export class Page {
 if (Symbol.dispose) Page.prototype[Symbol.dispose] = Page.prototype.free;
 
 /**
- * Clear the page callback.
- */
-export function clear_page_callback() {
-    wasm.clear_page_callback();
-}
-
-/**
- * Apply browser safety limits before interpreting an untrusted program.
- *
- * The VM cap counts both local and global PostScript allocations. The owning
- * browser Worker remains the hard wall-clock boundary: `std::time::Instant`
- * is unavailable on `wasm32-unknown-unknown`, so the UI client terminates the
- * Worker when its budget expires.
- * @param {Interpreter} interp
- * @param {number} max_vm_bytes
- */
-export function configure_limits(interp, max_vm_bytes) {
-    _assertClass(interp, Interpreter);
-    wasm.configure_limits(interp.__wbg_ptr, max_vm_bytes);
-}
-
-/**
  * @returns {Interpreter}
  */
 export function create_interpreter() {
@@ -277,19 +255,27 @@ export function render_viewport_band(interp, page_index, vp_x, vp_y, vp_w, vp_h,
 }
 
 /**
- * Register a JS callback for streaming render events.
+ * Set the ceiling on PostScript VM — strings, arrays, dictionaries — in bytes.
  *
- * The callback receives (event, arg1, arg2, arg3, data):
- *   event=0 (begin_page): arg1=index, arg2=width, arg3=height
- *   event=1 (rows): data=Uint8Array of RGBA band pixels
- *   event=2 (end_page): arg1=index
+ * The browser counterpart of the CLI's `--max-vm`: a program that would
+ * exceed it gets a `VMerror` it can catch, where an allocation the module
+ * cannot satisfy aborts it. The default is a quarter of the address space,
+ * which is 1 GiB here; a page embedding the viewer will usually want less.
  *
- * This streams bands directly to JS so WASM never holds a full page
- * in memory — critical at high DPI where a page can exceed 2 GB.
- * @param {Function} callback
+ * A program can lower its own limit with `setuserparams` but cannot raise it
+ * past this.
+ *
+ * The interpreter's own start-up state counts against the ceiling, so a
+ * value below what `create_interpreter` has already allocated refuses every
+ * further allocation. The ceiling bounds PostScript VM only, not the
+ * renderer's image and band buffers, and holds for the life of the
+ * interpreter.
+ * @param {Interpreter} interp
+ * @param {number} max_bytes
  */
-export function set_page_callback(callback) {
-    wasm.set_page_callback(callback);
+export function set_max_vm(interp, max_bytes) {
+    _assertClass(interp, Interpreter);
+    wasm.set_max_vm(interp.__wbg_ptr, max_bytes);
 }
 
 /**
@@ -328,10 +314,6 @@ function __wbg_get_imports() {
         __wbg___wbindgen_throw_bb96b2010945f0bc: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
-        __wbg_apply_cb180996ed7fdae9: function() { return handleError(function (arg0, arg1, arg2) {
-            const ret = arg0.apply(arg1, arg2);
-            return ret;
-        }, arguments); },
         __wbg_error_757e9472f8410341: function(arg0, arg1) {
             let deferred0_0;
             let deferred0_1;
@@ -352,10 +334,6 @@ function __wbg_get_imports() {
         },
         __wbg_new_227d7c05414eb861: function() {
             const ret = new Error();
-            return ret;
-        },
-        __wbg_new_from_slice_3eea173078478cfe: function(arg0, arg1) {
-            const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
             return ret;
         },
         __wbg_push_adb0107829f02d75: function(arg0, arg1) {
@@ -402,12 +380,6 @@ const PageFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_page_free(ptr, 1));
 
-function addToExternrefTable0(obj) {
-    const idx = wasm.__externref_table_alloc();
-    wasm.__wbindgen_externrefs.set(idx, obj);
-    return idx;
-}
-
 function _assertClass(instance, klass) {
     if (!(instance instanceof klass)) {
         throw new Error(`expected instance of ${klass.name}`);
@@ -437,15 +409,6 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
-}
-
-function handleError(f, args) {
-    try {
-        return f.apply(this, args);
-    } catch (e) {
-        const idx = addToExternrefTable0(e);
-        wasm.__wbindgen_exn_store(idx);
-    }
 }
 
 function passArray8ToWasm0(arg, malloc) {

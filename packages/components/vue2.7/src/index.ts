@@ -88,7 +88,7 @@ const getVmHandle = (vm: FileViewerVue27Vm): ViewerControllerHandle => {
   return createViewerControllerHandle(() => vm.controller, () => vm.disposeViewer())
 }
 
-export const FileViewer = Vue.extend({
+export const FileViewer: VueConstructor<FileViewerVue27PublicInstance & FileViewerVue27Vm> = Vue.extend({
   name: 'FileViewer',
   props: {
     url: String,

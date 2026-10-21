@@ -70,6 +70,10 @@ export const cloneFileViewerViewState = (
 
   return {
     ...state,
+    spreadsheet: state.spreadsheet ? {
+      ...state.spreadsheet,
+      range: state.spreadsheet.range ? { ...state.spreadsheet.range } : undefined,
+    } : undefined,
     zoom: state.zoom ? { ...state.zoom } : undefined,
     scroll: state.scroll ? { ...state.scroll } : undefined,
     navigation: state.navigation ? { ...state.navigation } : undefined,
@@ -363,6 +367,8 @@ export const createFileViewerViewStateController = ({
   let unsubscribe: (() => void) | null = null;
   let observer: MutationObserver | null = null;
   let state: FileViewerViewState | null = null;
+  let applySequence = 0;
+  let destroyed = false;
 
   const readProviderState = () => cloneFileViewerViewState(provider?.getState?.() || null);
 
@@ -381,6 +387,7 @@ export const createFileViewerViewStateController = ({
   };
 
   const clearProvider = () => {
+    applySequence += 1;
     unsubscribe?.();
     unsubscribe = null;
     provider = null;
@@ -388,16 +395,18 @@ export const createFileViewerViewStateController = ({
   };
 
   const syncProvider = () => {
-    if (enabled?.() === false) {
+    if (destroyed || enabled?.() === false) {
       clearProvider();
       return null;
     }
 
     const nextProvider = findFileViewerViewStateProvider(root());
     if (nextProvider !== provider) {
+      applySequence += 1;
       unsubscribe?.();
       provider = nextProvider;
       unsubscribe = nextProvider?.subscribe?.(change => {
+        if (destroyed || provider !== nextProvider) return;
         commitState(change.state, change);
       }) || null;
     }
@@ -448,11 +457,19 @@ export const createFileViewerViewStateController = ({
       if (!nextProvider?.applyState) {
         return cloneFileViewerViewState(state);
       }
-      const appliedState = await nextProvider.applyState(nextState, options);
+      const sequence = ++applySequence;
+      const appliedState = await nextProvider.applyState(cloneFileViewerViewState(nextState) || {}, options);
+      if (destroyed || nextProvider !== syncProvider()) {
+        return cloneFileViewerViewState(state);
+      }
+      if (sequence !== applySequence) {
+        return cloneFileViewerViewState(appliedState || nextProvider.getState());
+      }
       commitState(appliedState || nextProvider.getState());
       return cloneFileViewerViewState(state);
     },
     destroy() {
+      destroyed = true;
       disconnectObserver();
       clearProvider();
     },

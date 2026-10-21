@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-ppt",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Optional standalone renderer for legacy binary PowerPoint PPT and POT files.",
@@ -57,8 +57,8 @@
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.1.2",
-    "@file-viewer/ppt": "0.3.4"
+    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/ppt": "0.3.6"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

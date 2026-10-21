@@ -3,6 +3,8 @@ import { access, mkdir, readFile, rm } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { brotliCompressSync, constants as zlibConstants } from 'node:zlib'
+import { distributionMode } from '../../../build-support/distribution-mode.mjs'
+import { runtimeOnlyRustBuildEnvironment } from '../../../build-support/runtime-only-rust.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const rustDir = resolve(packageDir, 'rust')
@@ -31,7 +33,9 @@ await access(resolve(rustDir, 'Cargo.lock'))
 await rm(outputDir, { recursive: true, force: true })
 await mkdir(outputDir, { recursive: true })
 
-run('cargo', ['build', '--release', '--locked', '--target', 'wasm32-unknown-unknown'])
+run('cargo', ['build', '--release', '--locked', '--target', 'wasm32-unknown-unknown'], {
+  env: runtimeOnlyRustBuildEnvironment({ mode: distributionMode(), workspaceRoot: resolve(packageDir, '../../..') })
+})
 run('wasm-bindgen', [
   wasmInput,
   '--target',

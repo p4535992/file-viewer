@@ -1,0 +1,45 @@
+name: Frozen release artifacts
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  release-consumers:
+    name: Validate frozen archives and installed consumers
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      npm_config_audit: 'false'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.20.0
+      - name: Use the qualified npm toolchain
+        run: npm install --global npm@11.19.0 --ignore-scripts --registry=https://registry.npmjs.org
+      - name: Download and byte-check immutable release archives
+        run: node .github/scripts/runtime-ci-artifacts.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/runtime-candidate"
+      - name: Validate declarations, builds and offline Chromium and WebKit consumers
+        run: node .github/scripts/runtime-ci-consumers.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/runtime-candidate"
+      - name: Audit only approved frozen production scopes
+        env:
+          RUNTIME_AUDIT_DISCLOSURE_APPROVED: ${{ vars.RUNTIME_AUDIT_DISCLOSURE_APPROVED }}
+        run: node .github/scripts/runtime-ci-security.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/runtime-candidate"
+      - name: Retain consumer evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: frozen-release-consumers
+          path: |
+            ${{ runner.temp }}/runtime-ci-evidence/consumers.json
+            ${{ runner.temp }}/runtime-ci-evidence/*.png
+          if-no-files-found: warn
+          retention-days: 14

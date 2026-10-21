@@ -36,6 +36,20 @@ const options = {
 - XLSX drawing 中的 TIFF 图片会按需加载 MIT 许可的 UTIF.js，在浏览器内转换为 PNG；普通表格不会加载 TIFF 解码器。
 - 表格使用虚拟渲染，适合交互预览；完整打印按钮通常由上层能力判断隐藏，避免只打印当前视口。
 
+## 小内容 Excel 填满视口
+
+`options.spreadsheet.fillViewport` 默认 `false`。仅 Excel 格式（XLSX / XLSM / XLSB / XLS 及其模板）有效；开启后以工作表默认行高、列宽补充空白列标题（A / B / …）、行号和网格，让小表或空 Sheet 填满当前预览区域。容器 resize、缩放和切 Sheet 时会重新计算，补充部分沿用虚拟画布，不生成整张 Excel 空表，也不拉伸已有单元格。
+
+```ts
+const options = {
+  rendererMode: 'replace',
+  renderers: spreadsheetRenderer,
+  spreadsheet: { fillViewport: true },
+}
+```
+
+补充部分只用于显示，不改变工作簿数据、used-range、原文件下载/导出、搜索结果或内容统计。CSV / TSV / ODS / Numbers 等格式忽略此属性；不传或设为 `false` 保持原有行为。
+
 ## 离线资产
 
 默认可选 Worker 路径为：

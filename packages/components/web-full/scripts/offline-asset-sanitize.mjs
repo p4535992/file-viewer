@@ -180,7 +180,11 @@ const replacements = [
   {
     pattern: /\bunpkg\.com\b/g,
     replacement: 'file-viewer-offline-cdn',
-    reason: 'runtime CDN fallback markers are forbidden in release assets'
+    reason: 'runtime CDN fallback markers are forbidden in release assets',
+    // Comparing the selected script's hostname does not introduce an outbound
+    // fallback. Preserve that comparison so explicit unpkg loading can select
+    // its own exact-version asset packs; actual URL fallbacks are still localized.
+    skipMatch: (text, offset) => /\.hostname\s*={2,3}\s*['"]$/.test(text.slice(Math.max(0, offset - 100), offset)) && /^['"]/.test(text.slice(offset + 'unpkg.com'.length))
   },
   {
     pattern: /http:\/\/localhost\//g,
@@ -229,23 +233,31 @@ async function collectTextFiles(root, files = []) {
   return files
 }
 
+export function sanitizeOfflineAssetText(original, file) {
+  let text = original
+  let replacementCount = 0
+  for (const item of replacements) {
+    if (item.skipFile?.(file)) continue
+    text = text.replace(item.pattern, (...arguments_) => {
+      const offset = arguments_.at(-2)
+      if (item.skipMatch?.(text, offset)) return arguments_[0]
+      replacementCount += 1
+      return item.replacement.replace(/\$(\d+)/g, (_, group) => arguments_[Number(group)] || '')
+    })
+  }
+  return { output: text, replacementCount }
+}
+
 export async function sanitizeOfflineViewerAssetTree(root) {
   const files = await collectTextFiles(root)
   const touchedFiles = []
   let replacementCount = 0
 
   for (const file of files) {
-    let text = await readFile(file, 'utf8')
-    const original = text
-    for (const item of replacements) {
-      if (item.skipFile?.(file)) {
-        continue
-      }
-      text = text.replace(item.pattern, () => {
-        replacementCount += 1
-        return item.replacement
-      })
-    }
+    const original = await readFile(file, 'utf8')
+    const sanitized = sanitizeOfflineAssetText(original, file)
+    const text = sanitized.output
+    replacementCount += sanitized.replacementCount
     if (text !== original) {
       await writeFile(file, text, 'utf8')
       touchedFiles.push(file)

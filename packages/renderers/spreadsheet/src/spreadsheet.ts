@@ -1,18 +1,22 @@
+import { createSpreadsheetRangeNavigation } from './spreadsheet/rangeNavigation.js';
 import {
   createFileViewerWorkerController,
   createFileViewerTranslator,
   createFileViewerZoomChangeEmitter as createZoomChangeEmitter,
   createEmptyFileViewerSearchState,
   registerFileViewerSearchProvider,
+  registerFileViewerViewStateProvider,
   registerFileViewerZoomProvider,
   resolveFileViewerColorScheme,
   resolveFileViewerFitScale,
   resolveFileViewerRuntimeAssetBaseUrl,
   resolveFileViewerSpreadsheetWorkerUrl,
   unregisterFileViewerSearchProvider,
+  unregisterFileViewerViewStateProvider,
   unregisterFileViewerZoomProvider,
   type FileRenderContext,
   type FileViewerDocumentAnchor,
+  type FileViewerViewState,
   type FileViewerFitRequest,
   type FileViewerFitResult,
   type FileViewerRenderedInstance as AppWrapper,
@@ -25,6 +29,7 @@ import {
 } from '@file-viewer/core';
 import { renderSpreadsheetChart } from './spreadsheet/chartRenderer.js';
 import { createSpreadsheetImageSourceResolver } from './spreadsheet/imageSource.js';
+import { shouldFillSpreadsheetViewport, SpreadsheetViewportFill } from './spreadsheet/viewport.js';
 import type { SheetCellMetadata, SheetChart, SheetDefinition, SheetImage, SheetModel } from './spreadsheet/worker/type.js';
 import {
   buildRows,
@@ -942,12 +947,26 @@ const renderFileViewerSpreadsheet = async (
   let searchRequestSequence = 0;
   let latestSearchRequest = 0;
   let pendingSearchJump: SpreadsheetSearchTarget | null = null;
+  let pendingViewRestore: {
+    state: FileViewerViewState;
+    sheetId: number;
+    isCurrent: () => boolean;
+    resolve: () => void;
+  } | null = null;
+  let lastViewScrollX = 0;
+  let lastViewScrollY = 0;
   let resolveWorkbookReady: (() => void) | null = null;
   const workbookReady = new Promise<void>(resolve => {
     resolveWorkbookReady = resolve;
   });
   const resizableColumns = context?.options?.spreadsheet?.resizableColumns === true;
   const resizableRows = context?.options?.spreadsheet?.resizableRows === true;
+  const fillViewport = shouldFillSpreadsheetViewport(
+    context?.options?.spreadsheet?.fillViewport,
+    type || context?.filename?.split('.').pop()
+  );
+  const viewportFill = new SpreadsheetViewportFill();
+  let renderedRows: unknown[] = [];
 
   const controller = createFileViewerWorkerController(
     createSpreadsheetWorkerFactory(target, buffer.byteLength, context),
@@ -964,6 +983,27 @@ const renderFileViewerSpreadsheet = async (
     return visible.length ? visible : sheets;
   };
   const getActiveSheetId = () => sheetIndex ?? sheets[0]?.id;
+  const rangeNavigation = createSpreadsheetRangeNavigation({
+    ready: workbookReady,
+    isVisibleSheet: id => sheets.some(sheet => sheet.id === id && !sheet.hidden),
+    getScale: () => zoom,
+    getState: () => ({
+      zoom: getZoomState(),
+      scroll: readSpreadsheetScroll(),
+      spreadsheet: { sheetId: getActiveSheetId() },
+    }),
+    restoreState: restoreSpreadsheetView,
+    fit: request => fitSpreadsheet(request),
+    onNavigate: () => { latestSearchRequest += 1; },
+    jump: range => jumpToSpreadsheetCell({ sheetId: range.sheetId, row: range.startRow, col: range.startCol }),
+    clearJump: () => {
+      pendingSearchJump = null;
+      const restore = pendingViewRestore;
+      pendingViewRestore = null;
+      restore?.resolve();
+      table?.draw();
+    },
+  });
   const getColumnLabel = (column: number) => {
     let value = Math.max(0, column) + 1;
     let label = '';
@@ -1019,6 +1059,7 @@ const renderFileViewerSpreadsheet = async (
     return searchState;
   };
   const getSearchCell = (row: number, col: number): 'active' | 'match' | undefined => {
+    if (rangeNavigation.contains(getActiveSheetId(), row, col)) return 'active';
     if (!searchCells.has(`${getActiveSheetId()}:${row}:${col}`)) return undefined;
     const current = (searchState.current?.anchor as SpreadsheetSearchAnchor | null)?.spreadsheet;
     return current?.sheetId === getActiveSheetId() && current.row === row && current.col === col
@@ -1506,20 +1547,26 @@ const renderFileViewerSpreadsheet = async (
     });
   };
 
-  const buildTableView = () => ({
-    config: createTableConfig({
-      hostHeight: getHostHeight(),
-      darkMode,
-      resizableColumns,
-      resizableRows,
-      copySelection: copySpreadsheetSelection,
-      searchCell: getSearchCell,
-      sheetDefaults,
-      virtualState,
-      zoomScale: zoom,
-    }),
-    columns: getDisplayColumns(virtualState.columns, zoom),
-  });
+  const buildTableView = () => {
+    const display = fillViewport && virtualState.active
+      ? viewportFill.build(virtualState, tableHost.clientWidth, Math.max(getHostHeight(), 240), zoom)
+      : { columns: virtualState.columns, rows: virtualState.rows };
+    return {
+      config: createTableConfig({
+        hostHeight: getHostHeight(),
+        darkMode,
+        resizableColumns,
+        resizableRows,
+        copySelection: copySpreadsheetSelection,
+        searchCell: getSearchCell,
+        sheetDefaults,
+        virtualState,
+        zoomScale: zoom,
+      }),
+      columns: getDisplayColumns(display.columns, zoom),
+      rows: display.rows,
+    };
+  };
 
   const resetViewportTracking = () => {
     viewportRange = { start: 0, end: 0 };
@@ -1556,6 +1603,12 @@ const renderFileViewerSpreadsheet = async (
       const head = Math.max(table.ctx.body.headIndex || 0, 0);
       const tail = Math.max(table.ctx.body.tailIndex || head, head);
       const scrollY = table.ctx.scrollY || 0;
+      const scrollX = table.ctx.scrollX || 0;
+      if (scrollX !== lastViewScrollX || scrollY !== lastViewScrollY) {
+        lastViewScrollX = scrollX;
+        lastViewScrollY = scrollY;
+        rangeNavigation.notify('scroll', 'viewer');
+      }
       scrollDirection = scrollY >= lastScrollY ? 1 : -1;
       lastScrollY = scrollY;
       viewportRange = { start: head, end: tail };
@@ -1596,28 +1649,14 @@ const renderFileViewerSpreadsheet = async (
 
   const renderTable = (
     instance: EVirtTableInstance,
-    columns = virtualState.columns,
-    rows = virtualState.rows,
     resetScroll = false
   ) => {
-    const view = {
-      config: createTableConfig({
-        hostHeight: getHostHeight(),
-        darkMode,
-        resizableColumns,
-        resizableRows,
-        copySelection: copySpreadsheetSelection,
-        searchCell: getSearchCell,
-        sheetDefaults,
-        virtualState,
-        zoomScale: zoom,
-      }),
-      columns: getDisplayColumns(columns, zoom),
-    };
+    const view = buildTableView();
 
     instance.loadConfig(view.config);
     instance.loadColumns(view.columns);
-    instance.loadData(rows);
+    instance.loadData(view.rows);
+    renderedRows = view.rows;
     instance.draw();
     syncImageViewport();
 
@@ -1636,10 +1675,14 @@ const renderFileViewerSpreadsheet = async (
 
   function syncTableLayout() {
     const instance = ensureTable();
-    const { config, columns } = buildTableView();
+    const { config, columns, rows } = buildTableView();
     instance.loadConfig(config);
     if (virtualState.active && columns.length) {
       instance.loadColumns(columns);
+    }
+    if (fillViewport && virtualState.active && rows !== renderedRows) {
+      instance.loadData(rows);
+      renderedRows = rows;
     }
     instance.doLayout();
     instance.draw();
@@ -1779,6 +1822,11 @@ const renderFileViewerSpreadsheet = async (
 
     const row = virtualState.rows[rowIndex];
     if (!row) {
+      if (fillViewport && renderedRows[rowIndex]) {
+        queueMicrotask(() => {
+          if (!disposed && table) syncTableLayout();
+        });
+      }
       return;
     }
 
@@ -1790,6 +1838,7 @@ const renderFileViewerSpreadsheet = async (
       virtualState.defaults.rowHeight
     );
     applyRowHeight(row, baseHeight);
+    virtualState.rowHeightOverrides.set(rowIndex, baseHeight);
     virtualState.rowHeightCache.set(rowIndex, baseHeight);
 
     const activeSheetId = getActiveSheetId();
@@ -1876,7 +1925,8 @@ const renderFileViewerSpreadsheet = async (
       if (!row) {
         return;
       }
-      const height = normalizeRowHeight(rawHeight, virtualState.defaults.rowHeight);
+      const height = virtualState.rowHeightOverrides.get(absoluteRow)
+        ?? normalizeRowHeight(rawHeight, virtualState.defaults.rowHeight);
       applyRowHeight(row, height);
       virtualState.rowHeightCache.set(absoluteRow, height);
     });
@@ -1907,7 +1957,7 @@ const renderFileViewerSpreadsheet = async (
       });
 
       const windowHeight = getRowHeight(ws.rowHeights, relativeRow, virtualState.defaults.rowHeight);
-      const height = normalizeRowHeight(
+      const height = virtualState.rowHeightOverrides.get(absoluteRow) ?? normalizeRowHeight(
         getRowHeight(ws.structure?.rowHeights, absoluteRow, windowHeight),
         virtualState.defaults.rowHeight
       );
@@ -2026,7 +2076,7 @@ const renderFileViewerSpreadsheet = async (
     }
 
     if (isFirstWindow) {
-      renderTable(ensureTable(), virtualState.columns, virtualState.rows, true);
+      renderTable(ensureTable(), true);
     } else {
       table?.draw();
     }
@@ -2041,6 +2091,7 @@ const renderFileViewerSpreadsheet = async (
       scheduleStableFirstPaintRefresh();
     }
 
+    flushPendingViewRestore();
     requestPendingSearchWindow();
     flushPendingSearchJump();
 
@@ -2067,6 +2118,7 @@ const renderFileViewerSpreadsheet = async (
     }
     table.loadColumns([]);
     table.loadData([]);
+    renderedRows = [];
     table.scrollTo(0, 0);
     table.draw();
   };
@@ -2087,6 +2139,9 @@ const renderFileViewerSpreadsheet = async (
 
     cached.loadingWindows.clear();
     virtualState = cached;
+    // Cached rows store display heights from their last active zoom. Rebuild
+    // those heights from unscaled state before loading them into the table.
+    syncScaledRowHeights();
     errorMessage = '';
     totalRows = cached.totalRows;
     totalCols = cached.totalCols;
@@ -2101,7 +2156,10 @@ const renderFileViewerSpreadsheet = async (
       if (disposed) {
         return;
       }
-      renderTable(ensureTable(), cached.columns, cached.rows);
+      if (virtualState !== cached || sheetId !== getActiveSheetId()) {
+        return;
+      }
+      renderTable(ensureTable());
       syncImageViewport();
       scheduleStableFirstPaintRefresh();
     });
@@ -2139,6 +2197,67 @@ const renderFileViewerSpreadsheet = async (
     return top;
   };
 
+  function readSpreadsheetScroll() {
+    const content = getSpreadsheetContentSize();
+    const width = Math.max(tableHost.clientWidth, content.contentWidth * zoom);
+    const height = Math.max(tableHost.clientHeight, content.contentHeight * zoom);
+    const top = table?.ctx.scrollY || 0;
+    const left = table?.ctx.scrollX || 0;
+    return {
+      top, left, width, height,
+      clientWidth: tableHost.clientWidth,
+      clientHeight: tableHost.clientHeight,
+      topRatio: height > tableHost.clientHeight ? top / (height - tableHost.clientHeight) : 0,
+      leftRatio: width > tableHost.clientWidth ? left / (width - tableHost.clientWidth) : 0,
+    };
+  }
+
+  function restoreSpreadsheetView(state: FileViewerViewState, isCurrent: () => boolean) {
+    if (!isCurrent()) return;
+    const scale = Number(state.scale ?? state.zoom?.scale);
+    if (Number.isFinite(scale) && scale > 0) setZoom(scale);
+    // Coordinate navigation supplies its own final scroll after the target loads.
+    if (state.spreadsheet?.range || !sheets.length) return;
+    const nextSheet = state.spreadsheet?.sheetId ?? getActiveSheetId();
+    if (nextSheet === getActiveSheetId() && !state.scroll) return;
+    return new Promise<void>(resolve => {
+      pendingViewRestore = { state, sheetId: nextSheet, isCurrent, resolve };
+      if (nextSheet !== getActiveSheetId()) {
+        cacheCurrentSheetState();
+        sheetIndex = nextSheet;
+        renderChrome();
+        startSheetSession();
+        scrollActiveSheetIntoView();
+      }
+      flushPendingViewRestore();
+    });
+  }
+
+  function flushPendingViewRestore() {
+    const restore = pendingViewRestore;
+    if (!restore || !table || !virtualState.active || restore.sheetId !== getActiveSheetId()) return;
+    // Cached sheet installation runs in a microtask and the table draws in RAF.
+    // Wait through that draw before its scroll bounds can clamp restored values.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (pendingViewRestore !== restore || !restore.isCurrent() || !table || disposed) return;
+      const scroll = restore.state.scroll;
+      const current = readSpreadsheetScroll();
+      const coordinate = (value: unknown, ratio: unknown, maximum: number) =>
+        Number.isFinite(value) ? Number(value) : Number.isFinite(ratio) ? Number(ratio) * maximum : 0;
+      const left = coordinate(scroll?.left, scroll?.leftRatio, Math.max(0, current.width - current.clientWidth));
+      const top = coordinate(scroll?.top, scroll?.topRatio, Math.max(0, current.height - current.clientHeight));
+      table.scrollTo(Math.max(0, left), Math.max(0, top));
+      table.draw();
+      syncImageViewport();
+      scheduleViewportLoad();
+      requestAnimationFrame(() => {
+        if (pendingViewRestore !== restore || !restore.isCurrent()) return;
+        pendingViewRestore = null;
+        restore.resolve();
+      });
+    }));
+  }
+
   function flushPendingSearchJump() {
     const pending = pendingSearchJump;
     if (
@@ -2155,6 +2274,9 @@ const renderFileViewerSpreadsheet = async (
         return;
       }
       pendingSearchJump = null;
+      const navigatingRange = rangeNavigation.isPending();
+      const finishRange = rangeNavigation.prepare(virtualState.totalRows, virtualState.totalCols);
+      if (navigatingRange && !finishRange) return;
       const targetTop = Math.max(
         0,
         getSearchRowTop(pending.row) - Math.max(0, (tableHost.clientHeight || 0) * 0.35)
@@ -2172,6 +2294,7 @@ const renderFileViewerSpreadsheet = async (
       table.draw();
       syncImageViewport();
       scheduleViewportLoad();
+      if (finishRange) requestAnimationFrame(finishRange);
     });
   }
 
@@ -2190,7 +2313,11 @@ const renderFileViewerSpreadsheet = async (
 
   function jumpToSpreadsheetSearchMatch(match: FileViewerSearchMatch | null) {
     const spreadsheet = (match?.anchor as SpreadsheetSearchAnchor | null)?.spreadsheet;
-    pendingSearchJump = spreadsheet || null;
+    jumpToSpreadsheetCell(spreadsheet || null);
+  }
+
+  function jumpToSpreadsheetCell(spreadsheet: SpreadsheetSearchTarget | null) {
+    pendingSearchJump = spreadsheet;
     if (!spreadsheet) {
       return;
     }
@@ -2210,6 +2337,8 @@ const renderFileViewerSpreadsheet = async (
   }
 
   function handleSheet(index: number) {
+    latestSearchRequest += 1;
+    rangeNavigation.cancel();
     if (sheetIndex === index) {
       scrollActiveSheetIntoView();
       return;
@@ -2238,6 +2367,7 @@ const renderFileViewerSpreadsheet = async (
 
   const searchProvider: FileViewerSearchProvider = {
     async search(query, options = {}) {
+      rangeNavigation.cancel();
       const normalizedQuery = query.replace(/\s+/g, ' ').trim();
       searchOptions = options;
       const requestNumber = ++latestSearchRequest;
@@ -2247,6 +2377,7 @@ const renderFileViewerSpreadsheet = async (
       }
 
       await workbookReady;
+      if (requestNumber !== latestSearchRequest || disposed || errorMessage) return searchState;
       const matches = await requestWorkbookSearch(normalizedQuery, searchOptions);
       if (requestNumber !== latestSearchRequest || disposed) {
         return searchState;
@@ -2264,6 +2395,8 @@ const renderFileViewerSpreadsheet = async (
       return nextState;
     },
     next() {
+      latestSearchRequest += 1;
+      rangeNavigation.cancel();
       if (!searchMatches.length) {
         return searchState;
       }
@@ -2276,6 +2409,8 @@ const renderFileViewerSpreadsheet = async (
       return nextState;
     },
     previous() {
+      latestSearchRequest += 1;
+      rangeNavigation.cancel();
       if (!searchMatches.length) {
         return searchState;
       }
@@ -2288,6 +2423,7 @@ const renderFileViewerSpreadsheet = async (
       return nextState;
     },
     clear() {
+      rangeNavigation.cancel();
       latestSearchRequest += 1;
       pendingSearchJump = null;
       return setSearchState('', []);
@@ -2297,6 +2433,10 @@ const renderFileViewerSpreadsheet = async (
     },
   };
   registerFileViewerSearchProvider(root, searchProvider);
+  registerFileViewerViewStateProvider(root, rangeNavigation.provider);
+  const unsubscribeViewStateZoom = zoomEmitter.subscribe(() => {
+    rangeNavigation.notify('zoom-change', 'viewer');
+  });
 
   const emitParseWorkbook = () => {
     emitWorker('parseWorkbook', {
@@ -2304,6 +2444,7 @@ const renderFileViewerSpreadsheet = async (
       fileType: type,
       filename: context?.filename,
       textEncoding: context?.options?.spreadsheet?.textEncoding,
+      includeEmptySheets: fillViewport,
     });
   };
 
@@ -2337,6 +2478,7 @@ const renderFileViewerSpreadsheet = async (
     if (sessionId && sessionId !== sheetSessionId) {
       return;
     }
+    rangeNavigation.cancel('failed');
 
     sheetInitializing = false;
     loadingState = false;
@@ -2356,6 +2498,9 @@ const renderFileViewerSpreadsheet = async (
   });
 
   controller.onWorkerError((event) => {
+    rangeNavigation.cancel('failed');
+    resolveWorkbookReady?.();
+    resolveWorkbookReady = null;
     sheetInitializing = false;
     loadingState = false;
     errorMessage = event.message || t('spreadsheet.error.workerFailed');
@@ -2407,6 +2552,9 @@ const renderFileViewerSpreadsheet = async (
     $el: root,
     unmount() {
       disposed = true;
+      rangeNavigation.cancel('disposed');
+      unsubscribeViewStateZoom();
+      unregisterFileViewerViewStateProvider(root);
       imageSourceResolver.dispose();
       closeImageLightbox();
       tableHostShell.removeEventListener('dblclick', handleImageDoubleClick, true);

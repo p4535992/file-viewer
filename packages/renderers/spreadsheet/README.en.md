@@ -36,6 +36,20 @@ const options = {
 - TIFF drawings in XLSX files load the MIT-licensed UTIF.js decoder only when needed and are converted to PNG in the browser. Ordinary spreadsheets do not load the TIFF decoder.
 - Uses virtual rendering for interaction. Host components usually hide full-document print for spreadsheets to avoid printing only the current viewport.
 
+## Fill the viewport for small Excel sheets
+
+`options.spreadsheet.fillViewport` defaults to `false` and applies only to Excel formats (XLSX / XLSM / XLSB / XLS and their templates). Enable it to add empty column headers (A / B / …), row numbers and grid cells using the worksheet's default sizes. Small and empty sheets fill the preview area, with padding recalculated on container resize, zoom and sheet changes. Padding uses the virtual canvas and does not stretch existing cells or allocate an entire Excel worksheet.
+
+```ts
+const options = {
+  rendererMode: 'replace',
+  renderers: spreadsheetRenderer,
+  spreadsheet: { fillViewport: true },
+}
+```
+
+This changes only the display: workbook data, used range, original-file downloads/exports, search results and content counts remain unchanged. CSV / TSV / ODS / Numbers ignore this option. Omitting it or setting it to `false` preserves the existing behavior.
+
 ## Offline Assets
 
 The optional worker path is:

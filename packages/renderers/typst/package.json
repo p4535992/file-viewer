@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-typst",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Standalone Typst renderer plugin for File Viewer powered by browser WASM.",
@@ -44,7 +44,8 @@
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./native-third-party-licenses": "./assets/NATIVE_THIRD_PARTY_LICENSES.json"
   },
   "files": [
     "assets",
@@ -58,7 +59,7 @@
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.1.2",
+    "@file-viewer/core": "workspace:3.2.2",
     "@myriaddreamin/typst-ts-renderer": "0.7.0",
     "@myriaddreamin/typst-ts-web-compiler": "0.7.0",
     "@myriaddreamin/typst.ts": "0.7.0"

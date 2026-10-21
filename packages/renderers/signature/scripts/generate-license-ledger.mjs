@@ -12,8 +12,9 @@ const outputPath = resolve(packageDir, 'THIRD_PARTY_LICENSES.json')
 const checkOnly = process.argv.includes('--check')
 const forbiddenLicense = /(?:^|[^A-Z])(?:AGPL|LGPL|GPL)(?:-|$)/iu
 const permissiveLicense = /(?:Apache-2\.0|BSD|MIT|ISC|Zlib|0BSD|Unlicense)/iu
-const licenseFilename = /^(?:licen[cs]e|copying|notice)(?:[._-].*)?$/iu
+const licenseFilename = /^(?:licen[cs]e|copying|copyright|notice)(?:[._-].*)?$/iu
 const licenseTexts = new Map()
+const reviewedNotices = JSON.parse(await readFile(resolve(packageDir, 'licenses/reviewed-publication-notices.json'), 'utf8'))
 
 const selectLicense = (declaredLicense) => {
   if (!forbiddenLicense.test(declaredLicense)) return declaredLicense
@@ -26,7 +27,7 @@ const selectLicense = (declaredLicense) => {
   return permissiveChoice
 }
 
-const collectLicenseFiles = async (directory) => {
+const collectLicenseFiles = async (directory, metadata) => {
   const names = (await readdir(directory, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && licenseFilename.test(entry.name))
     .map((entry) => entry.name)
@@ -38,11 +39,31 @@ const collectLicenseFiles = async (directory) => {
     if (!licenseTexts.has(sha256)) licenseTexts.set(sha256, text)
     hashes.push({ path: name, sha256 })
   }
+  const supplement = reviewedNotices[`${metadata.name}@${metadata.version}`]
+  if (supplement) {
+    assert.equal(metadata.license, supplement.declaredLicense)
+    const originalMetadata = await readFile(resolve(directory, 'Cargo.toml'))
+    assert.equal(createHash('sha256').update(originalMetadata).digest('hex'), supplement.packageMetadataSha256)
+    const original = await readFile(resolve(packageDir, 'licenses', supplement.path), 'utf8')
+    assert.equal(createHash('sha256').update(original).digest('hex'), supplement.sha256)
+    licenseTexts.set(supplement.sha256, original)
+    hashes.push({ path: supplement.path, sha256: supplement.sha256, kind: supplement.kind,
+      originalLicenseRecovered: supplement.originalLicenseRecovered })
+  }
+  if (!hashes.length && metadata.name === 'isarray' && metadata.version === '1.0.0') {
+    const original = await readFile(resolve(directory, 'README.md'), 'utf8')
+    const digest = createHash('sha256').update(original).digest('hex')
+    assert.equal(digest, 'ff138e683771b187f3629c383db72ee7d632009010a36d08e18e8d2a34222ec7')
+    assert.match(original, /Copyright \(c\) 2013 Julian Gruber/)
+    licenseTexts.set(digest, original)
+    hashes.push({ path: 'README.md (original complete MIT grant)', sha256: digest })
+  }
+  assert(hashes.length > 0, `Missing original grant or reviewed publication notice: ${metadata.name}@${metadata.version}`)
   return hashes
 }
 
 const cargoMetadata = JSON.parse(
-  execFileSync('cargo', ['metadata', '--locked', '--format-version', '1'], {
+  execFileSync('cargo', ['metadata', '--locked', '--offline', '--format-version', '1'], {
     cwd: rustDir,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024
@@ -77,7 +98,7 @@ for (const id of [...reachableCargoIds].sort()) {
     selectedLicense,
     repository: dependency.repository || null,
     source: dependency.source || null,
-    licenseFiles: await collectLicenseFiles(dirname(dependency.manifest_path))
+    licenseFiles: await collectLicenseFiles(dirname(dependency.manifest_path), dependency)
   })
 }
 
@@ -109,7 +130,7 @@ while (npmQueue.length) {
         ? manifest.repository
         : manifest.repository?.url || null,
     source: `https://registry.npmjs.org/${manifest.name}/-/${manifest.name.split('/').pop()}-${manifest.version}.tgz`,
-    licenseFiles: await collectLicenseFiles(dirname(packageJsonPath))
+    licenseFiles: await collectLicenseFiles(dirname(packageJsonPath), manifest)
   })
 }
 

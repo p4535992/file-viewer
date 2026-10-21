@@ -1,10 +1,10 @@
-import { createRequire } from 'node:module'
 import { mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import { writeBundleNotices } from '../../../build-support/bundle-notices.mjs'
+import { writeBundleInventory } from '../../../build-support/bundle-inventory.mjs'
+import { browserRuntimeOptions } from '../../../build-support/browser-runtime-options.mjs'
 
-const require = createRequire(import.meta.url)
 const root = fileURLToPath(new URL('..', import.meta.url))
 const output = new URL('../dist/vendor/', import.meta.url)
 await mkdir(output, { recursive: true })
@@ -20,9 +20,10 @@ const result = await build({
   // Only browser text parsing is exposed; local filesystem/Node ZIP IO is not used.
   define: { process: 'undefined' },
   metafile: true,
-  legalComments: 'eof',
+  ...browserRuntimeOptions(),
   outfile: fileURLToPath(new URL('xmind.js', output))
 })
 await writeBundleNotices(result.metafile, new URL('xmind.NOTICE.txt', output), {
   readmeLicensePackages: ['@ljheee/xmind-parser']
 })
+await writeBundleInventory(Object.keys(result.metafile.inputs), fileURLToPath(new URL('../.build/xmind-inputs.json', import.meta.url)))

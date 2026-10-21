@@ -43,8 +43,10 @@
 </p>
 
 <p align="center">
-  <a href="https://demo.file-viewer.app"><img src="docs/public/_media/file-viewer-demo-v2.2.6-desktop-zh.webp" width="920" alt="File Viewer 浏览器原生 DOCX 预览工作区" /></a>
+  <a href="https://demo.file-viewer.app"><img src="docs/public/_media/file-viewer-demo-v3-zh.webp" width="920" alt="File Viewer 在线演示：Word、Excel、PPT、3D 模型、CAD 图纸与二进制检查器" /></a>
 </p>
+
+<p align="center">⭐ 如果 File Viewer 对你有帮助，欢迎<a href="https://github.com/flyfish-dev/file-viewer">点个 Star</a>。</p>
 
 ---
 
@@ -165,7 +167,7 @@ CLI 默认使用 Standard 组合；`--profile full` 选择 Full 兼容包并添�
 ></flyfish-file-viewer>
 ```
 
-先将 `@file-viewer/web-full` 的完整 `dist/` 部署到示例中的 `/file-viewer/dist/`。IIFE 首包只注册 Custom Element、controller 和 lazy full preset；PDF、Word、Excel、二进制 PPT、PPTX、CAD、Typst、压缩包、CHM 等重型 renderer 会在命中文件类型时从 `dist/renderers/*.iife.js` 异步加载。完整部署 `dist/` 即可：其中 `vendor/ppt/` 已包含经过完整性校验的 `@file-viewer/ppt@0.3.4` ESM、Worker、WASM、CJK 字体与帧缓存模块，`vendor/chm/` 包含 CHM Rust/WASM Worker，并与其它版本对齐的资产一起交付。二进制 `.ppt` 和 CHM 默认无需配置运行时 URL；格式专用 URL 选项只用于非标准资产路径覆盖。
+先将 `@file-viewer/web-full` 的完整 `dist/` 部署到示例中的 `/file-viewer/dist/`。IIFE 首包只注册 Custom Element、controller 和 lazy full preset；PDF、Word、Excel、二进制 PPT、PPTX、CAD、Typst、压缩包、CHM 等重型 renderer 会在命中文件类型时从 `dist/renderers/*.iife.js` 异步加载。完整部署 `dist/` 即可：其中 `vendor/ppt/` 已包含经过完整性校验的 `@file-viewer/ppt@0.3.6` ESM、Worker、WASM、CJK 字体与帧缓存模块，`vendor/chm/` 包含 CHM Rust/WASM Worker，并与其它版本对齐的资产一起交付。二进制 `.ppt` 和 CHM 默认无需配置运行时 URL；格式专用 URL 选项只用于非标准资产路径覆盖。
 
 ### Vanilla JS
 
@@ -261,7 +263,7 @@ $('#viewer').fileViewer({ url: '/files/report.pdf' })
 
 ### full 包运行时资产
 
-所有 full 包默认把 Archive、CHM、PDF、DOCX、Excel、二进制 PPT、PPTX、CAD、Typst、Draw.io、SQLite 等运行时资产指向部署基址下的 `file-viewer/`（根部署即 `/file-viewer/`）。Vite 配置资产插件复制资源或随包 CLI 写入 `./public/file-viewer` 后，这些 URL 不需要逐项配置；经过校验的 `@file-viewer/ppt@0.3.4` 运行时位于 `vendor/ppt/`，CHM Worker、JavaScript bridge 与 Rust/WASM 文件位于 `vendor/chm/`，并保留各自 LICENSE 与 NOTICE。
+所有 full 包默认把 Archive、CHM、PDF、DOCX、Excel、二进制 PPT、PPTX、CAD、Typst、Draw.io、SQLite 等运行时资产指向部署基址下的 `file-viewer/`（根部署即 `/file-viewer/`）。Vite 配置资产插件复制资源或随包 CLI 写入 `./public/file-viewer` 后，这些 URL 不需要逐项配置；经过校验的 `@file-viewer/ppt@0.3.6` 运行时位于 `vendor/ppt/`，CHM Worker、JavaScript bridge 与 Rust/WASM 文件位于 `vendor/chm/`，并保留各自 LICENSE 与 NOTICE。
 
 ```ts
 import { setDefaultFullAssetBaseUrl } from '@file-viewer/vue3-full'
@@ -419,7 +421,7 @@ Adobe 创意文件能力是显式专业包：安装 [`@file-viewer/renderer-desi
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Core 底座 | [`@file-viewer/core`](https://www.npmjs.com/package/@file-viewer/core) | 无 | `latest` | 框架无关的格式矩阵、预览能力、资源加载、生命周期事件、搜索、缩放、打印、导出和操作 API |
 | PPTX 原生引擎 | [`@file-viewer/pptx`](https://www.npmjs.com/package/@file-viewer/pptx) | 无 | `latest` | 从 Flyfish 历史稳定实现拆出的独立 PPTX 渲染引擎，Worker 渐进解析，由 `@file-viewer/renderer-presentation` 按需加载 |
-| 二进制 PPT 运行时 | [`@file-viewer/ppt`](https://www.npmjs.com/package/@file-viewer/ppt) | 无 | `0.3.4` | 独立版本的演示文稿依赖；Demo、Full 资产与 CDN/IIFE 会交付其经过校验的公开运行时 |
+| 二进制 PPT 运行时 | [`@file-viewer/ppt`](https://www.npmjs.com/package/@file-viewer/ppt) | 无 | `0.3.6` | 独立版本的演示文稿依赖；Demo、Full 资产与 CDN/IIFE 会交付其经过校验的公开运行时 |
 | Word renderer | [`@file-viewer/renderer-word`](https://www.npmjs.com/package/@file-viewer/renderer-word) | 无 | `latest` | 标准 renderer 插件，承接 DOCX/DOC/DOT/RTF/ODT 链路，内部按需加载 `@file-viewer/docx`、`msdoc-viewer` 和 `rtf.js`，core-only 安装不再拉取 Word 重依赖 |
 | 演示文稿 renderer | [`@file-viewer/renderer-presentation`](https://www.npmjs.com/package/@file-viewer/renderer-presentation) | 无 | `latest` | 二进制 `.ppt` 路由到 `@file-viewer/ppt`，OpenXML 演示文稿路由到 `@file-viewer/pptx`，按需提供缩放、打印和导出 |
 | 绘图 renderer | [`@file-viewer/renderer-drawing`](https://www.npmjs.com/package/@file-viewer/renderer-drawing) | 无 | `latest` | 标准 renderer 插件，提供 Draw.io / diagrams.net 离线 viewer、Excalidraw 只读 SVG、Mermaid 官方 SVG 渲染、PlantUML SVG 服务接入、Panzoom 拖拽缩放、打印和 HTML 导出 |
@@ -476,7 +478,7 @@ npm install ./vendor/file-viewer-core-3.1.1.tgz ./vendor/file-viewer-web-3.1.1.t
 
 这只安装示例中的两个包，不包含全部格式或所有传递依赖。完全断网前，还需准备所选组件、preset、renderer、框架及第三方依赖的完整缓存或内网镜像；运行时则部署匹配版本的 Worker、WASM、字体和 vendor 目录。
 
-Core、PPTX、所有框架组件、Full 包和历史兼容包均可从 Release 获取。`file-viewer3` 和 `@flyfish-group/file-viewer3` 两个兼容包都提供 tarball。二进制 PPT 使用独立版本的 `@file-viewer/ppt@0.3.4`，其匹配运行时随 Demo、Full 资产和 IIFE 交付。非 Vite Full 项目仍使用随包 CLI 复制资产：`npx --no-install file-viewer-copy-assets ./public/file-viewer`。
+Core、PPTX、所有框架组件、Full 包和历史兼容包均可从 Release 获取。`file-viewer3` 和 `@flyfish-group/file-viewer3` 两个兼容包都提供 tarball。二进制 PPT 使用独立版本的 `@file-viewer/ppt@0.3.6`，其匹配运行时随 Demo、Full 资产和 IIFE 交付。非 Vite Full 项目仍使用随包 CLI 复制资产：`npx --no-install file-viewer-copy-assets ./public/file-viewer`。
 
 GitHub Release 会同步提供完整下载项:
 
@@ -891,6 +893,16 @@ pnpm docs:build
 - [支持格式](https://doc.file-viewer.app/guide/formats)
 - [本地开发与打包](https://doc.file-viewer.app/guide/development)
 - [Docker 部署](https://doc.file-viewer.app/guide/docker)
+
+## Star History
+
+<a href="https://www.star-history.com/?type=date&repos=flyfish-dev%2Ffile-viewer">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=flyfish-dev/file-viewer&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=flyfish-dev/file-viewer&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=flyfish-dev/file-viewer&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ## 开源说明
 

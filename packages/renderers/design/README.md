@@ -19,7 +19,7 @@ Flyfish File Viewer 的 Adobe 设计文件 renderer。解析和像素合成都�
 - PAT：支持 v1 的 8-bit RGB、灰度和索引色图案，解码 Raw/PackBits、alpha 与透明索引并显示真实像素；更老版本、16/32-bit、CMYK/Lab 和其他压缩会明确拒绝。
 - GRD：支持 v5 Action Descriptor、文件夹、实色渐变色标/透明度与浏览器预览；噪声渐变只提供带固定种子的确定性近似并明确标注，不声称与 Photoshop 噪声算法逐像素一致。
 - ASL：支持 v2 样式名称/ID、效果图、多实例数量、混合/不透明度/Blend If 摘要、图案引用和内嵌 PAT 预览。缺少目标图层、字体、色彩配置和 Photoshop 私有效果语义时不伪造最终样式栅格。
-- EPS/PS：在可终止 Worker 中运行 Stet WASM，支持多页、按需栅格化、缩放和有界打印。发布产物不含上游 URW Base35 或 Ghostscript CMYK ICC，改用 OFL 字体替代与 PLRM DeviceCMYK 公式回退。它是实验性通用预览，不承诺覆盖全部 Adobe PostScript Level 3 扩展；字体度量和色彩管理可能与 Adobe 应用不同。
+- EPS/PS：在可终止 Worker 中运行 Stet WASM，支持多页、按需栅格化、缩放和有界打印。引擎直接使用上游 URW Base35 OFL 字体和 CC0 CMYK profile。它是实验性通用预览，不承诺覆盖全部 Adobe PostScript Level 3 扩展；文档所用字体及印刷条件仍可能与 Adobe 应用不同。
 
 以上状态会在支持矩阵中分别标为实验性或未实现；扩展名识别不等于完整支持。
 
@@ -62,4 +62,4 @@ EPS/PS 默认另限 32 MiB 源文件、100 页、8192 像素单边、1600 万输
 
 ## 许可证
 
-本包采用 Apache-2.0。`ag-psd`、`@webtoon/psd`、`base64-js`、`pako`、`@xmldom/xmldom` 与 `xmlchars` 采用 MIT，`saxes` 采用 ISC；`@paged-media/introspect-wasm` 选择 MPL-2.0；Stet 为 Apache-2.0 OR MIT；四组替代字体为 SIL OFL 1.1。完整声明见 `THIRD_PARTY_NOTICES.md`，许可全文随 npm 包或离线资产分发。本 npm 包不携带上游图片或笔刷 fixture；Demo 的外部样例均在 `SOURCES.md` 与哈希清单中记录来源和许可证。
+本包采用 Apache-2.0。`ag-psd`、`@webtoon/psd`、`base64-js`、`pako`、`@xmldom/xmldom` 与 `xmlchars` 采用 MIT，`saxes` 采用 ISC；`@paged-media/introspect-wasm` 选择 MPL-2.0；Stet 为 Apache-2.0 OR MIT，内嵌 URW Base35 字体为 SIL OFL 1.1，CMYK profile 为 CC0。完整声明见 `THIRD_PARTY_NOTICES.md`，许可全文随 npm 包或离线资产分发。本 npm 包不携带上游图片或笔刷 fixture；Demo 的外部样例均在 `SOURCES.md` 与哈希清单中记录来源和许可证。

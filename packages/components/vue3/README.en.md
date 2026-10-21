@@ -1,5 +1,23 @@
 # @file-viewer/vue3
 
+<!-- FILE_VIEWER_PACKAGE_HEADER -->
+<p>
+  <a href="https://www.npmjs.com/package/@file-viewer/vue3"><img src="https://img.shields.io/npm/v/@file-viewer%2Fvue3?logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@file-viewer/vue3"><img src="https://img.shields.io/npm/dm/@file-viewer%2Fvue3?logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<p>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/">Docs</a> · <a href="https://demo.file-viewer.app/">Live demo</a> · <a href="https://doc.file-viewer.app/guide/formats">Format matrix</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">Issues</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/components/vue3/README.md">简体中文</a>
+</p>
+
+<p>
+  <a href="https://demo.file-viewer.app/"><img src="https://raw.githubusercontent.com/flyfish-dev/file-viewer/main/docs/public/_media/file-viewer-demo-v3-en.webp" width="760" alt="File Viewer live demo: Word, Excel, PowerPoint, 3D model, CAD drawing and binary inspector"></a>
+</p>
+
+> ⭐ If File Viewer helps you, please [star the repo on GitHub](https://github.com/flyfish-dev/file-viewer).
+
 The standard Vue 3 native component package for Flyfish File Viewer. It owns the Vue 3 component lifecycle and local controller while consuming the shared `@file-viewer/core` contracts and core browser engine. It exposes plugin install, component props, lifecycle events, search, zoom, print, export, and document-location ref APIs.
 
 ```bash
@@ -68,7 +86,7 @@ Every standard component package shares `@file-viewer/core` as the only common f
 
 ## Format Support Matrix
 
-The shared catalog registers 274 file extensions (224 stable and 50 experimental) across 47 preview pipelines. Experimental formats do not count toward stable support; full capability is assembled through renderer packages or presets.
+The shared catalog registers 275 file extensions (225 stable and 50 experimental) across 47 preview pipelines. Experimental formats do not count toward stable support; full capability is assembled through renderer packages or presets.
 
 | Preview pipeline | Category | Extensions | Level / status | Capabilities | Loading |
 | --- | --- | --- | --- | --- | --- |
@@ -104,7 +122,7 @@ The shared catalog registers 274 file extensions (224 stable and 50 experimental
 | DICOM | medical-image | `.dcm`, `.dicom` | basic / experimental | download, zoom(provider) | lazy async |
 | Digital signatures and evidence containers | cryptographic-container | `.p7m`, `.p7s`, `.p7c`, `.p7b`, `.pkcs7`, `.cms`, `.cmsc`, `.tsd`, `.tst`, `.tsq`, `.tsr`, `.asics`, `.scs`, `.asice`, `.sce`, `.ers`, `.asc`, `.sig`, `.pgp`, `.gpg`, `.jws` | structured / experimental | download | lazy async |
 | Markdown | markdown | `.md`, `.markdown` | structured / stable | download, print, HTML export, search | lazy async |
-| Code and Text | code | `.txt`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | download, print, HTML export, search | lazy async |
+| Code and Text | code | `.txt`, `.lrc`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | download, print, HTML export, search | lazy async |
 | Video | media | `.mp4`, `.webm`, `.m3u8` | high-fidelity / stable | download | lazy async |
 | Audio | media | `.mp3`, `.mpeg`, `.wav`, `.ogg`, `.oga`, `.opus`, `.m4a`, `.aac`, `.flac`, `.weba`, `.midi`, `.mid` | high-fidelity / stable | download | lazy async |
 | Adobe Photoshop | asset | `.psb`, `.pdd`, `.psdt`, `.psd` (enhances `data-asset`) | experimental / experimental | download, print, zoom | lazy async |
@@ -428,3 +446,15 @@ The Vue 3 component exposes `toolbar-start` and `toolbar-end` slots. They preser
 - `searchState`: query, total matches, and current match position.
 
 Set `styleIsolation: 'none'` when slot content is styled by host-page CSS. In Shadow DOM mode, use inline styles or File Viewer CSS variables.
+
+## Formats and related packages
+
+File Viewer previews 275+ file extensions in the browser, covering Office, PDF/OFD, CAD, 3D, archives, email, images, media and code, without server-side conversion. See the [format matrix](https://doc.file-viewer.app/guide/formats) for the full list.
+
+- Components: `@file-viewer/web`, `@file-viewer/vue3`, `@file-viewer/vue2.7`, `@file-viewer/vue2.6`, `@file-viewer/react`, `@file-viewer/react-legacy`, `@file-viewer/svelte`, `@file-viewer/jquery`, plus their `-full` packages
+- Presets: `@file-viewer/preset-lite`, `@file-viewer/preset-office`, `@file-viewer/preset-engineering`, `@file-viewer/preset-all`
+- Build: `@file-viewer/vite-plugin`, `file-viewer-copy-assets`
+
+## License
+
+This package is Apache-2.0. See [LICENSE](https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE).

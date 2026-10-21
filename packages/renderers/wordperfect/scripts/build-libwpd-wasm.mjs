@@ -8,6 +8,11 @@ import { fileURLToPath } from 'node:url'
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const vendorDir = resolve(packageDir, 'vendor/libwpd-src')
 const outputDir = resolve(packageDir, 'dist')
+const compiler = process.env.EMXX || 'em++'
+const compilerVersion = execFileSync(compiler, ['--version'], { encoding: 'utf8' }).split('\n')[0]
+if (!/\b6\.0\.9(?:-git)?$/.test(compilerVersion.trim())) {
+  throw new Error(`The retained native toolchain notices require Emscripten 6.0.9: ${compilerVersion}`)
+}
 const workDir = mkdtempSync(join(tmpdir(), 'file-viewer-libwpd-wasm-'))
 
 const inputs = [
@@ -55,7 +60,7 @@ const args = [
   '-o', resolve(outputDir, 'libwpd.mjs'),
 ]
 
-  execFileSync(process.env.EMXX || 'em++', args, { stdio: 'inherit' })
+  execFileSync(compiler, args, { stdio: 'inherit' })
   copyFileSync(resolve(outputDir, 'libwpd.mjs'), resolve(packageDir, 'vendor/libwpd.mjs'))
   copyFileSync(resolve(outputDir, 'libwpd.wasm'), resolve(packageDir, 'vendor/libwpd.wasm'))
   console.log(

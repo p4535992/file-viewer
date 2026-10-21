@@ -1,0 +1,43 @@
+packages/renderers/iwork/test/fixtures/LICENSE.libetonyek.txt -whitespace
+packages/renderers/wordperfect/test/fixtures/LICENSE.MPL-2.0.txt -whitespace
+# Registry-verified DOCX mirrors retain the publisher's exact bytes.
+**/vendor/docx/docx.worker.js whitespace=-blank-at-eol
+**/vendor/docx/jszip.min.js whitespace=-blank-at-eol
+# Preserve the upstream font grant's original line endings.
+**/LICENSE.ArchitectsDaughter.txt -text
+# Preserve the exact original grants deployed with these runtime assets.
+packages/compat/web/viewer/vendor/hangul/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/compat/web/viewer/vendor/iwork/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/compat/web/viewer/vendor/xlsx/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/compat/web/viewer/wasm/data/licenses/LICENSE.sql-js.txt -text
+packages/components/web/viewer/vendor/hangul/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/components/web/viewer/vendor/iwork/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/components/web/viewer/vendor/xlsx/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/components/web/viewer/wasm/data/licenses/LICENSE.sql-js.txt -text
+packages/tools/assets-standard/viewer/vendor/xlsx/licenses/THIRD_PARTY_LICENSES.txt -text
+packages/renderers/design/LICENSES/ag-psd-MIT.txt -text
+packages/renderers/design/LICENSES/fzstd-MIT.txt -text
+packages/renderers/design/LICENSES/saxes-ISC.txt -text
+**/LICENSE.ag-psd-MIT.txt -text
+**/LICENSE.fzstd-MIT.txt -text
+**/LICENSE.saxes-ISC.txt -text
+**/LICENSE_QCMS -text whitespace=-blank-at-eol
+packages/build-support/licenses/declarations/Node-v7.0.0-LICENSE.txt -text whitespace=-blank-at-eol,cr-at-eol
+apps/viewer-demo/public/vendor/hangul/licenses/THIRD_PARTY_LICENSES.txt -text whitespace=-blank-at-eof,cr-at-eol
+apps/viewer-demo/public/vendor/iwork/licenses/THIRD_PARTY_LICENSES.txt -text whitespace=cr-at-eol
+
+# Fixed public native grants preserve their original bytes and formatting.
+packages/build-support/licenses/native/** -text -whitespace
+packages/renderers/signature/licenses/*.txt -text -whitespace
+**/wasm/model/CORRESPONDING_SOURCE_NOTICE.txt -text -whitespace
+
+# Preserve unmodified Stet upstream grants.
+packages/renderers/design/LICENSES/Stet-URW-Fonts-OFL-1.1.txt -text -whitespace
+packages/renderers/design/LICENSES/Stet-CMYK-Profile.txt -text -whitespace
+packages/renderers/design/LICENSES/CC0-1.0.txt -text -whitespace
+**/LICENSE.Stet-URW-Fonts-OFL-1.1.txt -text -whitespace
+**/LICENSE.Stet-CMYK-Profile.txt -text -whitespace
+**/LICENSE.CC0-1.0.txt -text -whitespace
+**/Stet_NATIVE_THIRD_PARTY_LICENSES.json -text -whitespace
+packages/renderers/design/source/postscript/rust-licenses/* -text -whitespace
+packages/renderers/design/source/postscript/license-overrides/* -text -whitespace

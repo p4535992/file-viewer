@@ -7,7 +7,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url))
 const packageRoot = resolve(scriptDir, '..')
 const coreDistDir = join(packageRoot, 'dist')
 
-const relativeSpecifierPattern = /(\bfrom\s*['"]|\bimport\s*\(\s*['"])(\.{1,2}\/[^'"]+)(['"])/g
+const relativeSpecifierPattern = /(\bfrom\s*['"]|\bimport\s*\(\s*['"]|\bimport\s*['"])(\.{1,2}(?:\/[^'"]+)?)(['"])/g
 const runtimeExtensions = new Set(['.js', '.mjs', '.cjs', '.json', '.node'])
 
 // A dotted source basename such as `messages.ja` is not a JavaScript runtime
@@ -25,8 +25,12 @@ const resolveJsSpecifier = (fileDir, specifier) => {
     return `${specifier}.js`
   }
 
+  const declarationCandidate = resolve(fileDir, `${specifier}.d.ts`)
+  if (existsSync(declarationCandidate)) return `${specifier}.js`
+
   const indexCandidate = resolve(fileDir, specifier, 'index.js')
-  return existsSync(indexCandidate) ? `${specifier}/index.js` : specifier
+  const declarationIndexCandidate = resolve(fileDir, specifier, 'index.d.ts')
+  return existsSync(indexCandidate) || existsSync(declarationIndexCandidate) ? `${specifier}/index.js` : specifier
 }
 
 async function fixFile(filePath) {
@@ -43,17 +47,17 @@ async function fixFile(filePath) {
   return false
 }
 
-async function collectJsFiles(dir) {
+async function collectModuleFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true })
   const files = []
 
   for (const entry of entries) {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) {
-      files.push(...await collectJsFiles(path))
+      files.push(...await collectModuleFiles(path))
       continue
     }
-    if (entry.isFile() && extname(entry.name) === '.js') {
+    if (entry.isFile() && (extname(entry.name) === '.js' || entry.name.endsWith('.d.ts'))) {
       files.push(path)
     }
   }
@@ -61,7 +65,7 @@ async function collectJsFiles(dir) {
   return files
 }
 
-const files = await collectJsFiles(coreDistDir)
+const files = await collectModuleFiles(coreDistDir)
 let changedCount = 0
 
 for (const file of files) {

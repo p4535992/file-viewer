@@ -65,6 +65,26 @@
 
 ## 可选专业 renderer
 
+流式地理数据可显式装配 `@file-viewer/renderer-3d/geo3d`，支持 LAS/LAZ/COPC、GeoTIFF/COG、CityJSON、3D Tiles 和 3TZ；默认 3D renderer 和 Full preset 不会加载它。普通 TIFF 继续走图片链路，检测到地理标签后才切换。URL 或本地 File 输入保留随机读取；3TZ 解压有大小、数量和路径边界。
+
+```bash
+npm install @file-viewer/renderer-3d @giro3d/giro3d@2.0.5
+# 需要 3TZ 时再安装
+npm install jszip@3.10.2
+npx file-viewer-geo3d-assets public/file-viewer/vendor/geo3d
+```
+
+```ts
+import { createGeo3dRenderer } from '@file-viewer/renderer-3d/geo3d'
+
+const options = {
+  rendererMode: 'extend',
+  renderers: [createGeo3dRenderer({ assetBaseUrl: '/file-viewer/vendor/geo3d/' })]
+}
+```
+
+安装的匹配版本解码资产、Worker、WASM 和许可证均部署在本地。检测规则、Range/CORS、3TZ 边界和样例说明见 [Geo3D 指南](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/3d/GEO3D.md)。
+
 从 3.1.2 起，[BPMN 流程图](/zh/guide/bpmn) 和 [XML 校验与转换配置](/zh/guide/xml-profiles) 可显式启用，但不会随 Full 包自动开启。
 
 Adobe 设计、DICOM、数字签名检查与二进制检查器都是显式可选能力，不属于八个已发布 `@file-viewer/*-full` 包或冻结的 `@file-viewer/preset-all` 兼容基线。这样普通升级不会额外引入专业 Worker/WASM、医学影像、密码学或二进制分析依赖，也不会改变 Full 包已经发布的能力边界。
@@ -75,6 +95,8 @@ Adobe 设计、DICOM、数字签名检查与二进制检查器都是显式可选
 | **DICOM** (`@file-viewer/renderer-dicom`) | `.dcm`、`.dicom` | `npm install @file-viewer/renderer-dicom` | `npx file-viewer-cli config add dicom --write` | 预览一个本地 DICOM Part 10 文件，支持多帧导航、窗宽/窗位、缩放、拖动、旋转、适配视图和基础元数据；不负责 study 组装、PACS/DICOMweb、MPR、分割或诊断。 |
 | **数字签名** (`@file-viewer/renderer-signature`) | `.p7m`、`.p7s`、`.p7c`、`.p7b`、`.pkcs7`、`.cms`、`.cmsc`、`.tsd`、`.tst`、`.tsq`、`.tsr`、`.asics`、`.scs`、`.asice`、`.sce`、`.ers`、`.asc`、`.sig`、`.pgp`、`.gpg`、`.jws` | `npm install @file-viewer/renderer-signature` | `npx file-viewer-cli config add p7m --write` | 在浏览器本地做有界容器检查，并分开报告解析、摘要、签名和时间戳结果。 |
 | **二进制检查器** (`@file-viewer/renderer-binary`) | `.bin`、`.hex`、`.elf`、`.exe`、`.dll`、`.class`、`.macho` | `npm install @file-viewer/renderer-binary` | `npx file-viewer-cli config add bin --write` | 浏览器本地的只读 offset/十六进制/ASCII 视图，使用受限模块 Worker、虚拟化行、类型值与受审核的 ELF、PE/COFF、Mach-O、PNG、ZIP、WebAssembly、Java class 头部目录；不会声明 `application/octet-stream`，也不会替换专用 renderer。 |
+
+DICOM 安装（包括 CLI `--profile full`）需要遵循包内 [DICOM 安装策略](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/dicom/README.md#应用安装策略)，配置应用根目录的依赖 overrides 并满足 Node.js 要求。默认依赖图仍有审计发现，消费项目不会继承本仓库的 workspace 策略。部署前需验证实际应用及浏览器行为。
 
 ### 已经使用 Full 包时
 
@@ -525,7 +547,7 @@ fileViewerRenderers({
 
 | 格式线                      | 当前优先方案                                                                                                                                                  | 后续拆包方向                                                                                             |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Presentation / PPT / PPTX   | `@file-viewer/renderer-presentation` 作为标准 renderer 插件；二进制 `.ppt` 按需加载包内 `@file-viewer/ppt@0.3.4` Worker/OffscreenCanvas/WASM 与有界帧缓存，OpenXML 文件按需加载 `@file-viewer/pptx` 和另一条 Worker，ODP 仍归 OpenDocument 兼容链路。 | core 不直接依赖任何演示文稿引擎；标准资产布局零配置，`.ppt` 只在自定义路径时使用 `presentation.pptModuleUrl` / `pptWorkerUrl` / `pptWasmUrl` / `pptFontUrl` 覆盖，PPTX 使用 `workerUrl` / `workerType` 覆盖自托管资源。 |
+| Presentation / PPT / PPTX   | `@file-viewer/renderer-presentation` 作为标准 renderer 插件；二进制 `.ppt` 按需加载包内 `@file-viewer/ppt@0.3.6` Worker/OffscreenCanvas/WASM 与有界帧缓存，OpenXML 文件按需加载 `@file-viewer/pptx` 和另一条 Worker，ODP 仍归 OpenDocument 兼容链路。 | core 不直接依赖任何演示文稿引擎；标准资产布局零配置，`.ppt` 只在自定义路径时使用 `presentation.pptModuleUrl` / `pptWorkerUrl` / `pptWasmUrl` / `pptFontUrl` 覆盖，PPTX 使用 `workerUrl` / `workerType` 覆盖自托管资源。 |
 | Word / DOCX / DOC / RTF / ODT | `@file-viewer/renderer-word` 作为标准 renderer 插件，底层按需加载自研 `@file-viewer/docx`、`msdoc-viewer` 和 RTF/OpenDocument 兼容链路。 | core 已移除 `@file-viewer/docx`、`msdoc-viewer`、`rtf.js`、`linkedom` 等 Word 直接依赖，Word 完整预览统一通过 renderer-word 或 preset-all 装配。 |
 | OFD                         | 使用 `@file-viewer/renderer-ofd` + `DLTech21/ofd.js` 源码链路在线预览，避开 npm dist 授权 WASM 分支；vendor 源码随 renderer 包离线分发。                  | core 已移除 OFD 兼容入口、`jszip`、`ofd-xml-parser` 和 OFD vendor，OFD 完整预览统一通过 renderer-ofd 或 preset-all 装配。 |
 | Typst                       | 使用官方 Typst Rust/WASM 生态在浏览器内编译并渲染，不退化为源码查看。                                                                                         | `@file-viewer/renderer-typst` 独立维护 compiler/renderer WASM、字体和缓存策略。                          |
@@ -549,7 +571,7 @@ fileViewerRenderers({
 - [x] `FileViewerOptions.builtinRenderers` 支持 `all`、`lite`、`none`，为默认轻量化和显式全量装配提供稳定开关。
 - [x] wrapper README 和开源总仓 README 补齐 `renderers` / `rendererMode` / `builtinRenderers` 的按需装配示例，并由 `verify:ecosystem-readmes` 校验 `@file-viewer/vite-plugin`、`virtual:file-viewer-renderers` 和 `configuredFileViewerRenderers` 等关键接入口径。
 - [x] Vue3 原生组件渲染面板切换到同一套 renderer plugin/preset 装配链路，`options.renderers`、`rendererMode` 和 `builtinRenderers` 会在组件路径真实生效。
-- [x] `@file-viewer/preset-all` 在既有兼容能力基础上加入浏览器原生 CHM，共 222 个稳定扩展名、33 条链路；后续新增的 Adobe 设计、DICOM、数字签名/证据与二进制检查器均为显式按需渲染器，不会静默进入既有 preset/full 依赖闭包。完整源码目录当前为 274 个扩展名（224 个稳定、50 个实验）和 47 条链路。
+- [x] `@file-viewer/preset-all` 在既有兼容能力基础上加入浏览器原生 CHM，共 222 个稳定扩展名、33 条链路；后续新增的 Adobe 设计、DICOM、数字签名/证据与二进制检查器均为显式按需渲染器，不会静默进入既有 preset/full 依赖闭包。完整源码目录当前为 275 个扩展名（225 个稳定、50 个实验）和 47 条链路。
 - [x] `pnpm audit:renderer-deps` 输出所有 core 直接依赖对应的目标 renderer package，不允许 unclassified。
 - [x] `pnpm verify:on-demand-boundaries` 守住按需加载边界：core 不依赖 renderer/preset/wrapper，标准组件包不依赖 renderer/preset，compat 包只 alias 到目标组件，`preset-lite` / `preset-office` / `preset-engineering` 只能聚合各自白名单 renderer，`preset-all` 才聚合完整 renderer。
 

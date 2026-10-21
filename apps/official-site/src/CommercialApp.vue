@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { FORMAT_CATALOG_SUMMARY } from './formatCatalog.generated'
 import {
   ArrowLeft,
   ArrowRight,
@@ -35,7 +36,7 @@ const comparisonRows = computed(() =>
         {
           dimension: '产品定位',
           icon: Boxes,
-          open: '浏览器原生、多格式、离线优先的开源预览组件。覆盖 274 个已注册扩展名与 47 条独立预览链路，其中 224 个稳定、50 个实验。',
+          open: `浏览器原生、多格式、离线优先的开源预览组件。覆盖 ${FORMAT_CATALOG_SUMMARY.registeredExtensionCount} 个已注册扩展名与 ${FORMAT_CATALOG_SUMMARY.rendererCount} 条独立预览链路，其中 ${FORMAT_CATALOG_SUMMARY.stableExtensionCount} 个稳定、${FORMAT_CATALOG_SUMMARY.experimentalExtensionCount} 个实验。`,
           commercial:
             '面向严肃 Office 场景的原生文档引擎，重点解决 Word、Excel、PowerPoint 的高还原与企业交付。'
         },
@@ -71,7 +72,7 @@ const comparisonRows = computed(() =>
         {
           dimension: 'Product role',
           icon: Boxes,
-          open: 'A browser-native, multi-format, offline-first open-source viewer covering 274 registered extensions across 47 preview pipelines: 224 stable and 50 experimental.',
+          open: `A browser-native, multi-format, offline-first open-source viewer covering ${FORMAT_CATALOG_SUMMARY.registeredExtensionCount} registered extensions across ${FORMAT_CATALOG_SUMMARY.rendererCount} preview pipelines: ${FORMAT_CATALOG_SUMMARY.stableExtensionCount} stable and ${FORMAT_CATALOG_SUMMARY.experimentalExtensionCount} experimental.`,
           commercial:
             'A native document engine for serious Office workflows, focused on Word, Excel, and PowerPoint fidelity and enterprise delivery.'
         },

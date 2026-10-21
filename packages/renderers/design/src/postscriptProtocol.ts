@@ -9,10 +9,10 @@ export interface PostscriptPageInfo {
 
 export interface PostscriptOpenResult {
   engine: 'stet-wasm'
-  engineVersion: '0.7.0+file-viewer-safe.1'
+  engineVersion: '0.8.7'
   renderBackend: 'cpu-tiny-skia'
-  colorFallback: 'plrm-device-cmyk'
-  fontSubstitutes: readonly ['Carlito', 'Tinos', 'Cousine', 'Noto Sans Symbols 2']
+  colorProfile: 'CGATS001Compat-v2-micro (CC0)'
+  fontSubstitutes: readonly ['URW Base35 (OFL-1.1)']
   pages: PostscriptPageInfo[]
 }
 

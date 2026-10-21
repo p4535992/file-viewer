@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "component": "Node.js POSIX path",
+  "upstreamVersion": "7.0.0",
+  "source": "https://raw.githubusercontent.com/nodejs/node/v7.0.0/lib/path.js",
+  "sourceSha256": "c1c71083021675d1af30fa23861d383c3a3f84578ce6f6b16bc34d0a49d0d6b0",
+  "licenseSource": "https://raw.githubusercontent.com/nodejs/node/v7.0.0/LICENSE",
+  "licenseSha256": "1914bfb950be8d576ce9e49c8a0e51c9f2402560fe3c19093e69bc1306a56e9e",
+  "adapterSha256": "5b020862ee4cd0b3139d9cd5b0535d37e2555f6693cc2d67c089b3c22314fa33",
+  "changes": [
+    "extract normalizeStringPosix, _format and posix object",
+    "replace Node process.cwd() with browser root /",
+    "replace util.inspect in validation error with typeof",
+    "export POSIX implementation as ESM without Windows implementation"
+  ],
+  "replaces": "path-webpack; no license claim about fork modifications"
+}

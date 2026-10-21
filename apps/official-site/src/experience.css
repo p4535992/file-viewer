@@ -816,34 +816,117 @@
 .support-footer {
   margin-top: 0;
 }
+.workflow-grid > .band {
+  max-width: 100%;
+}
+.workflow-grid .section-heading > p:last-child,
+.workflow-grid .ecosystem-copy > p:not(.section-kicker) {
+  max-width: 62ch;
+  color: var(--site-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+.workflow-grid .section-kicker {
+  margin-top: 0;
+  color: var(--precision-green-dark);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
 .quickstart-tabs {
   flex-wrap: wrap;
   overflow: visible;
-  gap: 5px;
-  padding-bottom: 12px;
+  gap: 6px;
+  margin-inline: 0;
+  padding: 0 0 16px;
+  scroll-snap-type: none;
 }
 .quickstart-tab {
-  min-height: 36px;
-  padding: 0 11px;
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 12px;
   border: 1px solid transparent;
   border-radius: 7px;
 }
 .quickstart-tab.is-active {
-  border-color: var(--site-line);
-  background: var(--site-surface-soft) !important;
+  border-color: color-mix(in srgb, var(--precision-green) 30%, var(--site-line));
+  background: color-mix(in srgb, var(--precision-green) 10%, var(--site-surface)) !important;
 }
 .quickstart-tab-copy strong {
   color: var(--site-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  white-space: normal;
 }
 .quickstart-tab.is-active .quickstart-tab-copy strong {
   color: var(--precision-green-dark);
 }
-.quickstart-tab:focus-visible {
+.quickstart-tab:focus-visible,
+.quickstart-panel pre:focus-visible,
+.quickstart-dots button:focus-visible {
   outline: 2px solid var(--precision-green);
-  outline-offset: 2px;
+  outline-offset: -2px;
+}
+.quickstart-header {
+  flex-flow: row wrap;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.quickstart-header > div {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+.quickstart-header div > span {
+  overflow-wrap: anywhere;
+  white-space: normal;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+.quickstart-header div > strong,
+.quickstart-header a {
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.quickstart-header a {
+  width: auto;
+  min-height: 44px;
+}
+.quickstart-footer {
+  flex-flow: row wrap;
+  gap: 12px;
+  padding: 16px 20px;
+}
+.quickstart-footer > span {
+  flex: 1 1 26rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
 }
 .quickstart-dots {
+  display: flex;
   flex-wrap: wrap;
+  gap: 2px;
+}
+.quickstart-dots button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+.quickstart-dots button::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 6px;
+  background: var(--site-muted);
+  content: '';
+}
+.quickstart-dots button.is-active::before {
+  width: 18px;
+  background: var(--precision-green-dark);
 }
 .quickstart-track {
   display: block;
@@ -852,6 +935,20 @@
 }
 .quickstart-panel {
   width: 100%;
+}
+.quickstart-panel pre {
+  min-height: 18rem;
+  max-height: 26rem;
+  padding: 20px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--site-muted) transparent;
+  scrollbar-width: thin;
+}
+.quickstart-panel code,
+.quickstart-panel code.hljs {
+  font-size: 0.875rem;
+  line-height: 1.75;
 }
 .quickstart-panel[aria-hidden='false'] {
   animation: snippet-appear 180ms ease-out;

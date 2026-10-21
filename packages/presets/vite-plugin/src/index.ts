@@ -92,9 +92,11 @@ export interface FileViewerRenderersPluginOptions {
    */
   chunkStrategy?: FileViewerChunkStrategy
   /**
-   * Wraps existing manualChunks functions with known circular-dependency-safe
-   * vendor groups. This keeps CodeMirror/Lezer/Sandpack in one chunk when host
+   * Stabilizes default chunk groups and wraps existing manualChunks functions.
+   * This keeps CodeMirror/Lezer/Sandpack in one chunk when host
    * apps split node_modules by package name, avoiding production TDZ errors.
+   * Pako and the shared CommonJS helpers also stay outside renderer/app chunks
+   * so compressed-format imports cannot form an initialization cycle.
    */
   stabilizeInteropChunks?: boolean
   /**
@@ -397,6 +399,7 @@ const rendererModules: readonly RendererModuleDescriptor[] = [
     formats: [
       'text',
       'txt',
+      'lrc',
       'log',
       'code',
       'md',
@@ -1220,9 +1223,19 @@ function getNodeModulePackageName(id: string) {
 }
 
 function getStableInteropChunkName(id: string) {
+  // Rollup's virtual helper is shared by every converted CommonJS package.
+  // Leaving it in an app/renderer chunk makes Pako depend back on that chunk
+  // before its exported utility object has been initialized (issue #311).
+  if (id.startsWith('\0') && /(?:^|\/)commonjsHelpers\.js$/.test(id.slice(1))) {
+    return 'vendor-commonjs'
+  }
   const packageName = getNodeModulePackageName(id)
   if (!packageName) {
     return undefined
+  }
+
+  if (packageName === 'pako') {
+    return 'vendor-commonjs'
   }
 
   if (
@@ -1256,6 +1269,11 @@ function createRolldownCodeSplittingGroups(
 ): FileViewerCodeSplittingGroup[] {
   const groups: FileViewerCodeSplittingGroup[] = []
   if (options.stabilizeInteropChunks !== false) {
+    groups.push({
+      name: 'vendor-commonjs',
+      test: (id: string) => getStableInteropChunkName(id) === 'vendor-commonjs',
+      priority: -10
+    })
     groups.push({
       name: 'vendor-codemirror',
       test: (id: string) => getStableInteropChunkName(id) === 'vendor-codemirror',
@@ -2183,6 +2201,17 @@ async function copyKnownRendererAssets(targetRoot: string, rendererIds: readonly
       : undefined
   )
 
+  for (const [id, filename] of [['cad-license', 'LICENSE'], ['cad-notice', 'NOTICE']] as const) {
+    await push('cad', id, join(targetRoot, 'wasm/cad', cadRuntimeVersion || '', filename), () =>
+      copyFileIfPresent(
+        cadRoot ? join(cadRoot, filename) : null,
+        join(targetRoot, 'wasm/cad', cadRuntimeVersion || '', filename)
+      ),
+      undefined,
+      cadRoot ? { sourcePackage: '@flyfish-dev/cad-viewer', sourceVersion: cadRuntimeVersion || undefined } : undefined
+    )
+  }
+
   const modelDependencyAnchors = [
     '@file-viewer/renderer-3d',
     '@file-viewer/geometry-engine'
@@ -2318,6 +2347,23 @@ async function copyKnownRendererAssets(targetRoot: string, rendererIds: readonly
 
   const sqlJsRoot = resolvePackageRoot('sql.js', ['@file-viewer/renderer-data'])
   const designRendererRoot = resolvePackageRoot('@file-viewer/renderer-design')
+  const designRendererIds = rendererModules.find(
+    descriptor => descriptor.packageName === '@file-viewer/renderer-design'
+  )?.rendererIds || []
+  for (const rendererId of designRendererIds) {
+    await push(
+      rendererId,
+      `${rendererId}-third-party-notices`,
+      join(targetRoot, 'vendor/design/THIRD_PARTY_NOTICES.md'),
+      () => copyFileIfPresent(
+        designRendererRoot ? join(designRendererRoot, 'THIRD_PARTY_NOTICES.md') : null,
+        join(targetRoot, 'vendor/design/THIRD_PARTY_NOTICES.md')
+      ),
+      undefined,
+      undefined,
+      true
+    )
+  }
   const introspectWasmRoot = resolvePackageRoot('@paged-media/introspect-wasm', [
     '@file-viewer/renderer-design'
   ])
@@ -2435,6 +2481,10 @@ async function copyKnownRendererAssets(targetRoot: string, rendererIds: readonly
   const postscriptLicenses = [
     ['postscript-design-license-stet-apache', 'Stet-Apache-2.0.txt', 'LICENSE.stet-Apache-2.0.txt'],
     ['postscript-design-license-stet-mit', 'Stet-MIT.txt', 'LICENSE.stet-MIT.txt'],
+    ['postscript-design-license-urw-ofl', 'Stet-URW-Fonts-OFL-1.1.txt', 'LICENSE.Stet-URW-Fonts-OFL-1.1.txt'],
+    ['postscript-design-license-cmyk-provenance', 'Stet-CMYK-Profile.txt', 'LICENSE.Stet-CMYK-Profile.txt'],
+    ['postscript-design-license-cc0', 'CC0-1.0.txt', 'LICENSE.CC0-1.0.txt'],
+    ['postscript-design-license-native-dependencies', 'Stet_NATIVE_THIRD_PARTY_LICENSES.json', 'Stet_NATIVE_THIRD_PARTY_LICENSES.json'],
     ['postscript-design-license-carlito-ofl', 'Carlito-OFL-1.1.txt', 'LICENSE.Carlito-OFL-1.1.txt'],
     ['postscript-design-license-tinos-ofl', 'Tinos-OFL-1.1.txt', 'LICENSE.Tinos-OFL-1.1.txt'],
     ['postscript-design-license-cousine-ofl', 'Cousine-OFL-1.1.txt', 'LICENSE.Cousine-OFL-1.1.txt'],
@@ -2564,14 +2614,26 @@ const independentlyOwnedAssetRendererIds = new Map<string, string>([
 
 function resolveInstalledCapabilityAssetSources(
   installedAssetPackages: readonly string[],
-  anchorPackages: readonly string[]
+  anchorPackages: readonly string[],
+  ownerPackageRoot?: string
 ) {
   return installedAssetPackages.map((packageName): InstalledCapabilityAssetSource => {
     if (packageName === 'file-viewer-copy-assets') {
       throw new Error('[file-viewer:vite-plugin] The v2 aggregate asset carrier is forbidden in a v3 capability plan.')
     }
-    const packageRoot = resolvePackageRoot(packageName, anchorPackages)
+    const ownedPackageJson = ownerPackageRoot
+      ? tryResolvePackageJson(packageName, createRequire(join(ownerPackageRoot, 'package.json')))
+      : null
+    const packageRoot = ownerPackageRoot
+      ? (ownedPackageJson ? dirname(ownedPackageJson) : null)
+      : resolvePackageRoot(packageName, anchorPackages)
     if (!packageRoot) throw new Error(`[file-viewer:vite-plugin] Could not resolve installed asset owner ${packageName}.`)
+    const packageJson = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as {
+      name?: string
+    }
+    if (packageJson.name !== packageName) {
+      throw new Error(`[file-viewer:vite-plugin] Asset owner identity differs from ${packageName}.`)
+    }
     const packageVersion = readPackageVersion(packageRoot)
     if (!packageVersion) throw new Error(`[file-viewer:vite-plugin] Could not read ${packageName} version.`)
     const payloadRoot = join(packageRoot, 'viewer')
@@ -2838,6 +2900,42 @@ async function copyBundledFullRendererAssets(
     )
   }
 
+  const packageJson = JSON.parse(readFileSync(join(source.packageRoot, 'package.json'), 'utf8')) as {
+    dependencies?: Record<string, string>
+  }
+  // Full may split large asset families into version-paired dependencies.
+  // Resolve only its declared owners, never an unrelated project-level pack.
+  const dependencies = packageJson.dependencies || {}
+  const splitPackageNames = Object.keys(dependencies)
+    .filter(name => name.startsWith('@file-viewer/assets-'))
+  for (const name of splitPackageNames) {
+    const pin = dependencies[name].replace(/^workspace:/, '')
+    if (pin !== source.sourceVersion) {
+      throw new Error(`[file-viewer:vite-plugin] ${source.packageName} must pin ${name} to ${source.sourceVersion}.`)
+    }
+  }
+  const splitSources = resolveInstalledCapabilityAssetSources(splitPackageNames, [], source.packageRoot)
+  const assetOwners = new Map<string, InstalledCapabilityAssetSource>()
+  const descriptorKeys = ['rendererId', 'kind', 'target', 'required', 'defaultPath'] as const
+  for (const owner of splitSources) {
+    if (owner.packageVersion !== source.sourceVersion) {
+      throw new Error(`[file-viewer:vite-plugin] ${source.packageName} cannot use ${owner.packageName}@${owner.packageVersion}; expected ${source.sourceVersion}.`)
+    }
+    for (const group of owner.manifest.rendererAssetManifests || []) {
+      const bundledGroup = manifest.rendererAssetManifests.find(entry => entry.rendererId === group.rendererId)
+      for (const asset of group.assets) {
+        if (asset.target !== 'public' || !asset.defaultPath) continue
+        const bundledAsset = bundledGroup?.assets.find(entry => entry.id === asset.id)
+        if (!bundledAsset || descriptorKeys.some(key => bundledAsset[key] !== asset[key])) {
+          throw new Error(`[file-viewer:vite-plugin] Split asset ${owner.packageName}:${asset.id} differs from the declared Full manifest.`)
+        }
+        const key = `${asset.rendererId}:${asset.id}`
+        if (assetOwners.has(key)) throw new Error(`[file-viewer:vite-plugin] Multiple split asset owners declare ${key}.`)
+        assetOwners.set(key, owner)
+      }
+    }
+  }
+
   await mkdir(targetRoot, { recursive: true })
   await cp(source.payloadRoot, targetRoot, { recursive: true, force: true })
   const results: AssetCopyResult[] = []
@@ -2851,16 +2949,20 @@ async function copyBundledFullRendererAssets(
     const destination = resolve(targetRoot, ...relativePath.split('/'))
     let copied = false
     let reason: string | undefined
+    const owner = assetOwners.get(`${asset.rendererId}:${asset.id}`)
     if (!isPathWithin(targetRoot, destination)) {
       reason = 'asset manifest path escapes the copy target'
     } else {
       try {
+        if (owner) {
+          await copyAssetPathWithoutConflicts(owner.payloadRoot, targetRoot, relativePath)
+        }
         copied = matchesBundledAssetKind(asset.kind, await stat(destination))
         if (!copied) {
           reason = `copied path does not match asset kind ${asset.kind}`
         }
-      } catch {
-        reason = 'bundled full asset not found after copy'
+      } catch (error) {
+        reason = owner ? (error as Error).message : 'bundled full asset not found after copy'
       }
     }
     results.push({
@@ -2870,8 +2972,8 @@ async function copyBundledFullRendererAssets(
       copied,
       required: asset.required,
       reason,
-      sourcePackage: source.packageName,
-      sourceVersion: source.sourceVersion
+      sourcePackage: owner?.packageName || source.packageName,
+      sourceVersion: owner?.packageVersion || source.sourceVersion
     })
   }
 
@@ -3247,7 +3349,8 @@ const defaultRequiredAssetRendererIds: readonly string[] = [
   'office-presentation',
   'archive',
   'cad',
-  'typst'
+  'typst',
+  'postscript-design'
 ]
 
 function isRequiredAssetResult(result: AssetCopyResult): boolean {
@@ -3394,7 +3497,9 @@ export function fileViewerRenderers(options: FileViewerRenderersPluginOptions = 
         build: {
           rollupOptions: {
             output: {
-              manualChunks: createManualChunks(selection, autoPresetIds)
+              manualChunks: options.stabilizeInteropChunks === false
+                ? createManualChunks(selection, autoPresetIds)
+                : createStableInteropManualChunks(createManualChunks(selection, autoPresetIds))
             }
           }
         }

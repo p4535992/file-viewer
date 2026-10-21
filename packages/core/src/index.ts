@@ -52,6 +52,14 @@ export {
   DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_APACHE_LICENSE_PACKAGE_PATH,
   DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PATH,
   DEFAULT_FILE_VIEWER_POSTSCRIPT_STET_MIT_LICENSE_PACKAGE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_URW_LICENSE_PACKAGE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_CMYK_NOTICE_PACKAGE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_CC0_LICENSE_PACKAGE_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PATH,
+  DEFAULT_FILE_VIEWER_POSTSCRIPT_NATIVE_NOTICES_PACKAGE_PATH,
   DEFAULT_FILE_VIEWER_POSTSCRIPT_CARLITO_LICENSE_PATH,
   DEFAULT_FILE_VIEWER_POSTSCRIPT_CARLITO_LICENSE_PACKAGE_PATH,
   DEFAULT_FILE_VIEWER_POSTSCRIPT_TINOS_LICENSE_PATH,
@@ -368,6 +376,8 @@ export {
   getFileViewerAutoRendererPresetVersion,
   hasFileViewerRendererPresetName,
   installFileViewerRendererPlugins,
+  matchesFileViewerRendererFilename,
+  resolveFileViewerRendererDefinition,
   listFileViewerAutoRendererPresetEntries,
   listFileViewerAutoRendererPresets,
   registerFileViewerAutoRendererPreset,
@@ -884,12 +894,14 @@ export type {
 } from './rendering/handler';
 export {
   DEFAULT_FILE_VIEWER_SOURCE_FILENAME,
+  DEFAULT_FILE_VIEWER_TEXT_FALLBACK_ENCODING,
   createFileViewerTextDecoder,
   decodeFileViewerTextBuffer,
   decodeFilename,
   getExtension,
   normalizeFileExtension,
   normalizeFilename,
+  isSingleByteFileViewerTextEncoding,
   isValidFileViewerUtf8,
   resolveFileViewerTextEncoding,
   resolveFileViewerSourceFilename,
@@ -902,6 +914,7 @@ export {
 export type {
   DecodedFileViewerText,
   FileViewerReadResult,
+  FileViewerSingleByteTextEncoding,
   FileViewerTextEncoding,
   ResolvedFileViewerTextEncoding,
   ResolvedFileViewerTextSource,
@@ -1291,6 +1304,8 @@ export type {
   FileViewerZoomState,
   NormalizedFileViewerSource,
   RendererCapability,
+  RendererSourceTypeProbe,
+  RendererSourceTypeProbeInput,
   RendererDefinition,
   RendererPlugin,
   RendererLoadContext,
@@ -1303,3 +1318,5 @@ export type {
   ViewerOperationContext,
 } from './contracts/types';
 export { resolveFileViewerCopiedAssetUrl } from './platform/copiedAssets';
+
+export type { FileViewerSpreadsheetRange, FileViewerSpreadsheetNavigationStatus } from './contracts/types';

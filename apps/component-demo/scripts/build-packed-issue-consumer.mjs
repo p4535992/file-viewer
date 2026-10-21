@@ -1,12 +1,97 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { packCompatibilityEngines } from './pack-compatibility-engines.mjs'
+import { docxPatchEntries } from '../../../.github/scripts/lib/docx-release-state.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
-export async function buildPackedIssueConsumer(
+// Only the consumer fixture owns application-level dependency policy. Workspace
+// pnpm overrides must not leak into this isolated npm consumer.
+export function preparePackedConsumerManifest(fixtureManifest, version) {
+  const manifest = structuredClone(fixtureManifest)
+  for (const name of Object.keys(manifest.dependencies)) {
+    if (name.startsWith('@file-viewer/') || name === 'file-viewer-copy-assets')
+      manifest.dependencies[name] = version
+  }
+  manifest.overrides ??= {}
+  return manifest
+}
+
+export function assertDocxCandidateAllowed(name, workspace) {
+  if (name === '@file-viewer/docx')
+    assert.ok(
+      docxPatchEntries(workspace).length > 0,
+      'Published DOCX must resolve from the ordinary registry, not a local candidate override'
+    )
+}
+
+export function summarizeConsumerAudit(report, status) {
+  assert.ok(status === 0 || status === 1, `npm audit failed with status ${status}`)
+  assert.ok(!report.error, `npm audit error: ${JSON.stringify(report.error)}`)
+  assert.ok(report.vulnerabilities && report.metadata?.vulnerabilities, 'Missing npm audit data')
+  assert.equal(report.auditReportVersion, 2, 'Unsupported npm audit report version')
+  assert.ok(
+    typeof report.vulnerabilities === 'object' && !Array.isArray(report.vulnerabilities),
+    'Invalid npm audit vulnerabilities'
+  )
+  const affectedEntries = report.metadata.vulnerabilities
+  for (const severity of ['info', 'low', 'moderate', 'high', 'critical', 'total'])
+    assert.ok(
+      Number.isSafeInteger(affectedEntries[severity]) && affectedEntries[severity] >= 0,
+      `Invalid npm audit ${severity} count`
+    )
+  assert.equal(
+    affectedEntries.total,
+    ['info', 'low', 'moderate', 'high', 'critical'].reduce(
+      (total, severity) => total + affectedEntries[severity],
+      0
+    ),
+    'Inconsistent npm audit severity counts'
+  )
+  assert.equal(affectedEntries.total, Object.keys(report.vulnerabilities).length)
+  const advisories = new Set()
+  for (const vulnerability of Object.values(report.vulnerabilities)) {
+    assert.ok(Array.isArray(vulnerability.via), 'Invalid npm audit advisory paths')
+    for (const via of vulnerability.via) {
+      if (typeof via === 'string') continue
+      assert.ok(
+        typeof via?.url === 'string' && via.url.length > 0,
+        'Missing npm audit advisory URL'
+      )
+      advisories.add(via.url)
+    }
+  }
+  return { affectedEntries, distinctAdvisories: [...advisories].sort() }
+}
+
+async function recordConsumerAudits(project, fixture) {
+  const summaries = {}
+  for (const scope of ['full', 'production']) {
+    const result = spawnSync(
+      'npm',
+      [
+        'audit',
+        '--json',
+        '--registry=https://registry.npmjs.org',
+        ...(scope === 'production' ? ['--omit=dev'] : [])
+      ],
+      { cwd: project, encoding: 'utf8', timeout: 120_000, maxBuffer: 10 * 1024 * 1024 }
+    )
+    if (result.error) throw result.error
+    await writeFile(resolve(project, `audit-${scope}.json`), result.stdout)
+    const report = JSON.parse(result.stdout)
+    summaries[scope] = summarizeConsumerAudit(report, result.status)
+    // npm's total counts affected dependency entries, including propagated findings.
+    // Keep the distinct advisory identities separate; neither count proves exploitability.
+    console.log(`PACKED_CONSUMER_AUDIT=${JSON.stringify({ fixture, scope, ...summaries[scope] })}`)
+  }
+  await writeFile(resolve(project, 'audit-summary.json'), JSON.stringify(summaries, null, 2) + '\n')
+}
+
+export async function preparePackedIssueConsumer(
   packageDirectory,
   {
     fixture = 'webpack5-issues',
@@ -34,18 +119,27 @@ export async function buildPackedIssueConsumer(
   await mkdir(project, { recursive: true })
   assert.ok(['webpack5-issues', 'angular-pptx'].includes(fixture), 'Unknown consumer fixture')
   await cp(resolve(root, 'apps/component-demo/test', fixture), project, { recursive: true })
-  const manifest = JSON.parse(await readFile(resolve(project, 'package.json'), 'utf8'))
+  const fixtureManifest = JSON.parse(await readFile(resolve(project, 'package.json'), 'utf8'))
   const version =
     process.env.PACKED_ISSUE_BASE_VERSION ||
     JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8')).version
-  for (const name of Object.keys(manifest.dependencies)) {
-    if (name.startsWith('@file-viewer/') || name === 'file-viewer-copy-assets')
-      manifest.dependencies[name] = version
-  }
-  manifest.overrides = {}
+  const manifest = preparePackedConsumerManifest(fixtureManifest, version)
   const candidates = []
-  for (const filename of (await readdir(packages)).filter((name) => name.endsWith('.tgz')).sort()) {
-    const path = resolve(packages, filename)
+  // Independently versioned engines are built in their owning repositories.
+  // A release rehearsal can supply their verified tarballs without relying on
+  // workspace-only patchedDependencies in the physical npm consumer.
+  const packageDirectories = [packages]
+  if (process.env.PACKED_ISSUE_ENGINE_DIR)
+    packageDirectories.push(resolve(process.env.PACKED_ISSUE_ENGINE_DIR))
+  else packageDirectories.push(await packCompatibilityEngines(root, project))
+  const workspace = await readFile(resolve(root, 'pnpm-workspace.yaml'), 'utf8')
+  const tarballs = []
+  for (const directory of packageDirectories)
+    for (const filename of (await readdir(directory))
+      .filter((name) => name.endsWith('.tgz'))
+      .sort())
+      tarballs.push({ filename, path: resolve(directory, filename) })
+  for (const { filename, path } of tarballs) {
     const metadata = JSON.parse(
       execFileSync('tar', ['-xOf', path, 'package/package.json'], { encoding: 'utf8' })
     )
@@ -53,6 +147,7 @@ export async function buildPackedIssueConsumer(
       !candidates.some((candidate) => candidate.name === metadata.name),
       `Duplicate candidate ${metadata.name}`
     )
+    assertDocxCandidateAllowed(metadata.name, workspace)
     const spec = `file:${path}`
     if (manifest.dependencies[metadata.name]) {
       manifest.dependencies[metadata.name] = spec
@@ -82,6 +177,13 @@ export async function buildPackedIssueConsumer(
     execFileSync(command, args, { cwd: project, stdio: 'inherit', timeout: 600_000 })
   }
   run('npm', ['install', '--ignore-scripts', '--registry=https://registry.npmjs.org'])
+  return { project, fixture, renderers }
+}
+
+export async function finishPackedIssueConsumer({ project, fixture, renderers }) {
+  function run(command, args) {
+    execFileSync(command, args, { cwd: project, stdio: 'inherit', timeout: 600_000 })
+  }
   run('node', [
     resolve(project, 'node_modules/file-viewer-copy-assets/dist/cli.js'),
     'public/file-viewer',
@@ -97,6 +199,18 @@ export async function buildPackedIssueConsumer(
   run('npm', ['run', 'build'])
   console.log(`PACKED_ISSUE_CONSUMER_DIR=${project}`)
   return project
+}
+
+export async function auditPreparedPackedIssueConsumer(prepared) {
+  await recordConsumerAudits(prepared.project, prepared.fixture)
+}
+
+export async function buildPackedIssueConsumer(packageDirectory, options) {
+  const prepared = await preparePackedIssueConsumer(packageDirectory, options)
+  // Keep formal audits mandatory; local scope inspection may prepare without
+  // transmitting, but it cannot claim the complete consumer gate passed.
+  await auditPreparedPackedIssueConsumer(prepared)
+  return finishPackedIssueConsumer(prepared)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

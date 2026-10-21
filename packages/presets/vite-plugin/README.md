@@ -1,5 +1,23 @@
 # @file-viewer/vite-plugin
 
+<!-- FILE_VIEWER_PACKAGE_HEADER -->
+<p>
+  <a href="https://www.npmjs.com/package/@file-viewer/vite-plugin"><img src="https://img.shields.io/npm/v/@file-viewer%2Fvite-plugin?logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@file-viewer/vite-plugin"><img src="https://img.shields.io/npm/dm/@file-viewer%2Fvite-plugin?logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<p>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/zh/">文档</a> · <a href="https://demo.file-viewer.app/">在线 Demo</a> · <a href="https://doc.file-viewer.app/guide/formats">格式矩阵</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">问题反馈</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/presets/vite-plugin/README.en.md">English</a>
+</p>
+
+<p>
+  <a href="https://demo.file-viewer.app/"><img src="https://raw.githubusercontent.com/flyfish-dev/file-viewer/main/docs/public/_media/file-viewer-demo-v3-zh.webp" width="760" alt="File Viewer 在线演示：Word、Excel、PPT、3D 模型、CAD 图纸与二进制检查器"></a>
+</p>
+
+> ⭐ 如果 File Viewer 对你有帮助，欢迎到 [GitHub](https://github.com/flyfish-dev/file-viewer) 点个 Star。
+
 Flyfish File Viewer 的 Vite 按需 renderer 自动装配插件。它可以自动发现已安装的 `@file-viewer/preset-*` 和 `@file-viewer/*-full` 包，让 Vue、React、Svelte、jQuery 和 Vanilla JS 组件无需手动传 `renderers` 就获得对应预览能力；也可以根据业务声明的文件格式生成 `virtual:file-viewer-renderers`，只 import 命中的 renderer 包，并提供 chunk 分组和离线 worker/WASM/字体资源复制能力。
 
 ## 最快开始
@@ -93,10 +111,10 @@ const options = {
 | `scan` | `true` 或 `{ roots, extensions, maxFileSize }`，扫描源码 hint 并合并格式 |
 | `inject` | 默认 `true`；设为 `false` 后手动导入 `virtual:file-viewer-renderers` |
 | `chunkStrategy` | `'renderer' | 'none'`，控制是否注入 renderer 级 chunk 分组 |
-| `stabilizeInteropChunks` | 默认 `true`；当宿主项目已有 `manualChunks` 函数时，把 CodeMirror / Lezer / Sandpack 归到同一 chunk，避免生产构建 TDZ 初始化错误 |
+| `stabilizeInteropChunks` | 默认 `true`；为默认分组和宿主 `manualChunks` 稳定 Pako / CommonJS 辅助模块及 CodeMirror / Lezer / Sandpack 的分组 |
 | `missingRenderer` | `'error' | 'warn' | 'ignore'`，控制尚未提取的 renderer 映射提示方式 |
 
-如果宿主项目按包名拆分 `node_modules`，`@codemirror/*`、`@lezer/*` 和 Sandpack 之间的循环依赖可能在生产构建中表现为 `codemirror-view.* Cannot access ... before initialization`。插件默认会包裹已有的 `manualChunks` 函数，只稳定这些已知互操作 chunk，保留其它自定义分组；确实需要完全接管时可设置 `stabilizeInteropChunks:false`。
+如果宿主项目按包名拆分 `node_modules`，`@codemirror/*`、`@lezer/*` 和 Sandpack 之间的循环依赖可能在生产构建中表现为 `codemirror-view.* Cannot access ... before initialization`。插件同时稳定默认分组和已有的 `manualChunks` 函数：Pako 与共享 CommonJS 辅助模块归入 `vendor-commonjs`，避免压缩格式的初始化循环；CodeMirror / Lezer / Sandpack 归入 `vendor-codemirror`。Vite 8 使用对应的 Rolldown 分组，其它自定义分组保持不变；确实需要完全接管时可设置 `stabilizeInteropChunks:false`。
 
 `copyAssets.baseDir` 可以覆盖自动目录：必须是相对路径，不能包含 `..`；传空字符串表示显式复制到根目录。插件会为标准包、preset 和 full 包同步统一运行时资源根；full 包仍同时同步 `setDefaultFullAssetBaseUrl()`。只有设置 `inject:false` 且不手动导入虚拟模块时，业务才需要调用 `setDefaultFileViewerAssetBaseUrl()`（full 包同时调用 `setDefaultFullAssetBaseUrl()`）。Vite 配置了 `base:'/app/'` 时，full 包开发 URL 为 `/app/file-viewer/...`，构建文件仍位于 `outDir/file-viewer/`。
 
@@ -162,3 +180,15 @@ export const fileViewerFormats = ['pdf', 'docx', 'xlsx']
 
 - 按需渲染架构: <https://doc.file-viewer.app/guide/on-demand-renderers>
 - 支持格式: <https://doc.file-viewer.app/guide/formats>
+
+## 格式与相关包
+
+File Viewer 在浏览器内预览 275+ 种扩展名，覆盖 Office、PDF/OFD、CAD、3D、压缩包、邮件、图片、音视频和代码，无需服务端转码；完整清单见 [格式矩阵](https://doc.file-viewer.app/guide/formats)。
+
+- 组件：`@file-viewer/web`、`@file-viewer/vue3`、`@file-viewer/vue2.7`、`@file-viewer/vue2.6`、`@file-viewer/react`、`@file-viewer/react-legacy`、`@file-viewer/svelte`、`@file-viewer/jquery`，以及对应的 `-full` 包
+- 能力组合：`@file-viewer/preset-lite`、`@file-viewer/preset-office`、`@file-viewer/preset-engineering`、`@file-viewer/preset-all`
+- 构建：`@file-viewer/vite-plugin`、`file-viewer-copy-assets`
+
+## 许可证
+
+本包采用 Apache-2.0。详见 [LICENSE](https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE)。

@@ -101,9 +101,10 @@ export function pinnedPnpmEnvironment(root, environment = process.env) {
     .filter(Boolean)
     .map((tool) => dirname(tool))
     .filter((directory) => directory !== '.')
-  const PATH = [...new Set([shimDirectory, ...toolDirectories, ...pathEntries])].join(
-    process.platform === 'win32' ? ';' : ':'
-  )
+  // Tool directories can also contain another Node; nested scripts must retain this runtime.
+  const PATH = [
+    ...new Set([shimDirectory, dirname(process.execPath), ...toolDirectories, ...pathEntries])
+  ].join(process.platform === 'win32' ? ';' : ':')
   return {
     ...environment,
     ...(wasmOpt ? { FILE_VIEWER_WASM_OPT: wasmOpt } : {}),

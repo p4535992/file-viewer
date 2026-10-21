@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "role": "immutable-historical-metadata-index",
+  "version": "3.2.1",
+  "recordedPublicCommit": "7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3",
+  "currentQualification": false,
+  "note": "Original recorded artifacts remain unchanged in public Git history. Current release metadata is independent.",
+  "files": [
+    {
+      "path": "artifacts/release-manifest.json",
+      "sha256": "25f6058cb72bf92b06c2f2848e67e8fa4649074dc1ab2ecdfcf6c602cf572192",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/release-manifest.json"
+    },
+    {
+      "path": "artifacts/npm-release-manifest.json",
+      "sha256": "759717dac3c87ba10354d21507dbb19a0d72af2bb6577326c2435105fbc7d4bb",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/npm-release-manifest.json"
+    },
+    {
+      "path": "artifacts/release-status.json",
+      "sha256": "a6f5c63d9f85ffe1f67b5af367f4b1a788e874e05a2e6099cad616bc2ee81ade",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/release-status.json"
+    },
+    {
+      "path": "artifacts/release-status.schema.json",
+      "sha256": "6b2f12d461bacae33723ee2d0e6c8271d5f061688bc8894d5227a00fa6cf9ca9",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/release-status.schema.json"
+    },
+    {
+      "path": "artifacts/release-matrix.json",
+      "sha256": "47933a6d5b30d9b6c6ee24ccccfa794dc65eab9dd9c7efb624abb73ebe89f35c",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/release-matrix.json"
+    },
+    {
+      "path": "artifacts/release-matrix.schema.json",
+      "sha256": "570144f893e0ce5e9be0e92df049be5ca5b14a85186e5cfa315e7018705174f5",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/release-matrix.schema.json"
+    },
+    {
+      "path": "artifacts/runtime-ci-candidate.json",
+      "sha256": "e421c03d5b253668a2812efedcf4a41ec05056f1567e0367a0e3e5f3108ced31",
+      "url": "https://github.com/flyfish-dev/file-viewer/blob/7bb5e683784735d5ff6b8eb5ebcd4b98ffed8db3/artifacts/runtime-ci-candidate.json"
+    }
+  ]
+}

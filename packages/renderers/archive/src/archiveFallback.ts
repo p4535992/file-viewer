@@ -4,6 +4,7 @@ import {
   isPreviewableArchiveEntry,
   type ArchiveEntryView,
 } from './archiveShared.js';
+import { resolveArchiveLimits, type ArchiveLimits } from './archiveLimits.js';
 
 const ZIP_LIKE_EXTENSIONS = new Set(['zip', 'zipx', 'jar', 'war', 'ear', 'apk', 'cbz']);
 const TAR_LIKE_EXTENSIONS = new Set(['tar', 'tgz', 'gz', 'gzip']);
@@ -15,7 +16,10 @@ const ZIP_GENERAL_PURPOSE_UTF8_FLAG = 0x0800;
 
 const UTF8_DECODER = new TextDecoder('utf-8');
 const UTF8_FATAL_DECODER = new TextDecoder('utf-8', { fatal: true });
-const CJK_TEXT_PATTERN = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/;
+// A GBK filename may contain only circled numbers, CJK punctuation or fullwidth
+// forms. Han-only detection corrupts those valid names and skips the ZIP fallback.
+// Keep a bounded script/symbol heuristic: arbitrary legacy bytes remain ambiguous.
+const GBK_FILENAME_TEXT_PATTERN = /[\u2460-\u24ff\u3000-\u303f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff01-\uff60]/;
 
 type DecompressionFormat = ConstructorParameters<typeof DecompressionStream>[0];
 
@@ -46,7 +50,7 @@ const isJSZipLike = (value: unknown): value is JSZipLike => {
 
 const createTextDecoder = (label: string) => {
   try {
-    return new TextDecoder(label);
+    return new TextDecoder(label, { fatal: true });
   } catch {
     return null;
   }
@@ -78,7 +82,7 @@ export const decodeZipFilename = (bytes: Uint8Array | number[]) => {
   }
 
   const gbk = decodeGbk(data);
-  if (gbk && CJK_TEXT_PATTERN.test(gbk)) {
+  if (gbk && GBK_FILENAME_TEXT_PATTERN.test(gbk)) {
     return gbk;
   }
 
@@ -109,7 +113,11 @@ const toArrayBuffer = (bytes: Uint8Array) => {
   return output.buffer;
 };
 
-const decompressBytes = async (bytes: Uint8Array, format: DecompressionFormat) => {
+const expandedSizeError = (limit: number) => {
+  return new RangeError(`Archive expanded data exceeds the configured limit of ${limit} bytes.`);
+};
+
+const decompressBytes = async (bytes: Uint8Array, format: DecompressionFormat, maxBytes: number) => {
   if (typeof DecompressionStream === 'undefined') {
     return null;
   }
@@ -117,7 +125,38 @@ const decompressBytes = async (bytes: Uint8Array, format: DecompressionFormat) =
   const stream = new Blob([toArrayBuffer(bytes)])
     .stream()
     .pipeThrough(new DecompressionStream(format));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      // Check before retaining a decoded chunk, including a chunk that crosses
+      // the budget after earlier chunks were accepted.
+      if (value.byteLength > maxBytes - size) {
+        throw expandedSizeError(maxBytes);
+      }
+      size += value.byteLength;
+      if (value.byteLength) {
+        chunks.push(value);
+      }
+    }
+    const output = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      output.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return output;
+  } catch (error) {
+    await reader.cancel(error).catch(() => undefined);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
 };
 
 const normalizeArchivePath = (path: string) => {
@@ -193,7 +232,8 @@ const parseTarEntries = (bytes: Uint8Array) => {
     const dataOffset = offset + TAR_BLOCK_SIZE;
     const nextOffset = dataOffset + Math.ceil(size / TAR_BLOCK_SIZE) * TAR_BLOCK_SIZE;
 
-    if (path && typeFlag !== '5' && !isArchiveSystemMetadataPath(path)) {
+    // PAX extended/global headers describe entries; they are not user files.
+    if (path && typeFlag !== '5' && typeFlag !== 'x' && typeFlag !== 'g' && !isArchiveSystemMetadataPath(path)) {
       const fileBytes = bytes.slice(dataOffset, dataOffset + size);
       entries.push(createEntryView({
         path,
@@ -268,8 +308,9 @@ export const hasLikelyGbkZipFilenames = (data: ArrayBuffer, filename: string) =>
 
     if ((flag & ZIP_GENERAL_PURPOSE_UTF8_FLAG) === 0) {
       const rawName = new Uint8Array(data, nameStart, nameLength);
-      const decoded = decodeZipFilename(rawName);
-      if (CJK_TEXT_PATTERN.test(decoded)) {
+      // Valid UTF-8 needs no legacy decoding, even when the producer omitted bit 11.
+      const decoded = decodeUtf8Strict(rawName) === null ? decodeGbk(rawName) : null;
+      if (decoded && GBK_FILENAME_TEXT_PATTERN.test(decoded)) {
         return true;
       }
     }
@@ -331,27 +372,36 @@ const loadZipEntries = async (data: ArrayBuffer) => {
   return entries;
 };
 
-const loadTarEntries = async (data: ArrayBuffer, filename: string, extension: string) => {
+const loadTarEntries = async (
+  data: ArrayBuffer,
+  filename: string,
+  extension: string,
+  options?: ArchiveLimits
+) => {
+  const { maxArchiveSize, maxEntryPreviewSize } = resolveArchiveLimits(options);
+  const isSingleGzipEntry = extension === 'gz' || extension === 'gzip';
+  const maxExpandedSize = isSingleGzipEntry
+    ? Math.min(maxArchiveSize, maxEntryPreviewSize)
+    : maxArchiveSize;
   const source = new Uint8Array(data);
+  if (extension === 'tar' && source.byteLength > maxExpandedSize) {
+    throw expandedSizeError(maxExpandedSize);
+  }
   const bytes = extension === 'tar'
     ? source
-    : await decompressBytes(source, 'gzip');
+    : await decompressBytes(source, 'gzip', maxExpandedSize);
 
   if (!bytes) {
     return null;
   }
 
-  if (extension === 'gz' || extension === 'gzip') {
-    const lower = filename.toLowerCase();
-    const isTarGz = lower.endsWith('.tar.gz') || lower.endsWith('.tgz');
-    if (!isTarGz) {
-      const name = getGzipEntryName(filename);
-      return [createEntryView({
-        path: name,
-        size: bytes.byteLength,
-        load: async () => toArrayBuffer(bytes),
-      })];
-    }
+  if (isSingleGzipEntry) {
+    const name = getGzipEntryName(filename);
+    return [createEntryView({
+      path: name,
+      size: bytes.byteLength,
+      load: async () => toArrayBuffer(bytes),
+    })];
   }
 
   return parseTarEntries(bytes);
@@ -362,7 +412,11 @@ const loadTarEntries = async (data: ArrayBuffer, filename: string, extension: st
  * mobile WebViews. The main libarchive path still covers broader formats;
  * this covers common ZIP/TAR/GZIP archives without an extra static Worker.
  */
-export const loadArchiveEntriesWithoutWorker = async (data: ArrayBuffer, filename: string) => {
+export const loadArchiveEntriesWithoutWorker = async (
+  data: ArrayBuffer,
+  filename: string,
+  limits?: ArchiveLimits
+) => {
   const extension = getArchiveExtension(filename);
 
   if (ZIP_LIKE_EXTENSIONS.has(extension)) {
@@ -373,7 +427,7 @@ export const loadArchiveEntriesWithoutWorker = async (data: ArrayBuffer, filenam
   }
 
   if (TAR_LIKE_EXTENSIONS.has(extension)) {
-    return loadTarEntries(data, filename, extension);
+    return loadTarEntries(data, filename, extension, limits);
   }
 
   return null;

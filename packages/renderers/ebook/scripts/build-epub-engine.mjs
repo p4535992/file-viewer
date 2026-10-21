@@ -1,8 +1,11 @@
+import { writeBundleInventory } from '../../../build-support/bundle-inventory.mjs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
+import { declaredSpdxNotice } from '../../../build-support/declared-spdx-notices.mjs';
+import { epubSourcePolicy } from './epub-source-policy.mjs';
 
 const EPUBJS_VERSION = '0.3.93';
 const XMLDOM_VERSION = '0.9.12';
@@ -36,6 +39,9 @@ const epubEntry = resolve(epubRoot, epubPackage.module || epubPackage.main);
 const xmlDomEntry = requireFromPackage.resolve('@xmldom/xmldom');
 const esbuildEntry = requireFromPackage.resolve('esbuild');
 const { build } = await import(pathToFileURL(esbuildEntry).href);
+const sourcePolicy = await epubSourcePolicy({
+  epubRoot, workspaceRoot: resolve(scriptDir, '../../../..'), ts: requireFromPackage('typescript'),
+});
 
 const outputDir = join(packageRoot, 'dist', 'vendor');
 const outputPath = join(outputDir, 'epubjs.js');
@@ -57,7 +63,7 @@ const result = await build({
   minify: true,
   outfile: outputPath,
   platform: 'browser',
-  plugins: [{
+  plugins: [sourcePolicy.plugin, {
     name: 'pinned-xmldom',
     setup(buildContext) {
       buildContext.onResolve({ filter: /^@xmldom\/xmldom$/ }, () => ({ path: xmlDomEntry }));
@@ -68,6 +74,13 @@ const result = await build({
   treeShaking: true,
 });
 
+const graphInputs = Object.keys(result.metafile.inputs);
+const inventory = await writeBundleInventory(graphInputs, join(packageRoot, '.build/epub-inputs.json'), {base:packageRoot});
+inventory.sourceTransforms = sourcePolicy.transforms;
+for (const name of ['marks-pane', 'path-webpack']) {
+  if (inventory.packages.some(item => item.name === name)) throw new Error(`${name} remains in the emitted EPUB graph`);
+}
+await writeFile(join(packageRoot, '.build/epub-inputs.json'), JSON.stringify(inventory, null, 2) + '\n', { mode: 0o600 });
 const normalize = path => path.split(sep).join('/');
 const xmlDomInputs = [];
 const physicalInputs = [];
@@ -139,7 +152,7 @@ for (const input of physicalInputs) {
   for (const filename of licenseFiles) {
     licenses.push({
       filename,
-      text: (await readFile(join(owner.root, filename), 'utf8')).trim(),
+      text: await readFile(join(owner.root, filename), 'utf8'),
     });
   }
   const repository = typeof owner.metadata.repository === 'string'
@@ -151,9 +164,21 @@ for (const input of physicalInputs) {
     license: owner.metadata.license || 'UNSPECIFIED',
     repository: repository || owner.metadata.homepage || '',
     licenses,
+    declarationNotice: licenses.length ? null : await declaredSpdxNotice(owner.metadata, { directory: owner.root }),
   });
 }
 
+if (!physicalInputs.includes(await realpath(sourcePolicy.adapter))) {
+  throw new Error('The EPUB engine did not use its verified Node POSIX replacement');
+}
+const posixMetadata = await readJson(join(sourcePolicy.nodeRoot, 'package.json'));
+bundledPackages.set(`${posixMetadata.name}@${posixMetadata.version}`, {
+  name: posixMetadata.name, version: posixMetadata.version, license: posixMetadata.license,
+  repository: posixMetadata.repository.url, declarationNotice: null,
+  licenses: await Promise.all(['LICENSE', 'NOTICE.txt'].map(async filename => ({
+    filename, text: await readFile(join(sourcePolicy.nodeRoot, filename), 'utf8'),
+  }))),
+});
 const sortedPackages = [...bundledPackages.values()].sort((left, right) => {
   return left.name.localeCompare(right.name) || left.version.localeCompare(right.version);
 });
@@ -167,6 +192,9 @@ for (const requiredPackage of [
   if (!bundledPackage?.licenses.length) {
     throw new Error(`Missing bundled license text for ${requiredPackage.join('@')}.`);
   }
+}
+for (const item of sortedPackages) {
+  if (!item.licenses.length && !item.declarationNotice) throw new Error(`Missing reviewed license coverage for bundled ${item.name}@${item.version}`);
 }
 
 const noticeSections = sortedPackages.map(item => {
@@ -182,7 +210,7 @@ const noticeSections = sortedPackages.map(item => {
       `--- ${license.filename} ---`,
       license.text,
     ])
-    : ['', 'No license file was present in the installed package; see the package metadata above.'];
+    : ['', item.declarationNotice.text];
   return [...header, ...licenseSections].join('\n');
 });
 const notices = [
@@ -212,10 +240,24 @@ const manifest = {
   bytes: output.byteLength,
   sha256,
   noticesSha256,
+  sourcePolicy: {
+    mode: 'licensed-posix-without-unused-drawing',
+    sourceTransforms: sourcePolicy.transforms.map(({ originalSha256, compiledSourceSha256 }) => ({ originalSha256, compiledSourceSha256 })),
+    nodePosix: {
+      upstreamVersion: sourcePolicy.provenance.upstreamVersion,
+      sourceSha256: sourcePolicy.provenance.sourceSha256,
+      licenseSha256: sourcePolicy.provenance.licenseSha256,
+      adapterSha256: sourcePolicy.provenance.adapterSha256,
+    },
+  },
   bundledPackages: sortedPackages.map(item => ({
     name: item.name,
     version: item.version,
     license: item.license,
+    ...(item.declarationNotice ? { licenseEvidence: {
+      kind: item.declarationNotice.kind, independentLicenseFile: 'absent', originalLicenseRecovered: false,
+      gitHead: item.declarationNotice.gitHead, packageJsonSha256: item.declarationNotice.packageJsonSha256,
+    } } : {}),
   })),
 };
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');

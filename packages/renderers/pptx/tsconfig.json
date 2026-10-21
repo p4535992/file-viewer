@@ -23,6 +23,8 @@
     "src/sanitize.ts",
     "src/styles.ts",
     "src/chart.ts",
+    "src/chart-types.ts",
+    "src/chart-config.ts",
     "src/worker.ts",
     "src/worker-location.ts",
     "src/viewer.ts",

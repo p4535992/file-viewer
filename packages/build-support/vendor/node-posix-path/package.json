@@ -1,0 +1,12 @@
+{
+  "name": "nodejs-posix-path",
+  "version": "7.0.0-browser.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodejs/node.git"
+  },
+  "description": "Vendored browser adaptation of the Node.js v7.0.0 POSIX path implementation; not a registry dependency."
+}

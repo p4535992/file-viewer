@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { stageRetainedAssetNotices, withRetainedAssetNoticeManifests } from './retained-asset-notices.mjs'
 
 const sourceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const packageDirFlag = process.argv.indexOf('--package-dir')
@@ -23,7 +24,7 @@ const sourceDir = existsSync(resolve(webViewerDir, 'flyfish-viewer-assets.json')
 const targetDir = resolve(packageDir, 'viewer')
 const sourceManifest = JSON.parse(await readFile(resolve(sourceDir, 'flyfish-viewer-assets.json'), 'utf8'))
 const groups = new Set(config.copyGroups)
-const selected = sourceManifest.rendererAssetManifests.filter(entry => groups.has(entry.rendererId))
+let selected = withRetainedAssetNoticeManifests(sourceManifest.rendererAssetManifests.filter(entry => groups.has(entry.rendererId)))
 const missing = [...groups].filter(group => !selected.some(entry => entry.rendererId === group))
 if (missing.length) throw new Error(`${packageJson.name} references missing asset groups: ${missing.join(', ')}`)
 
@@ -42,6 +43,8 @@ for (const asset of selected.flatMap(entry => entry.assets)) {
   const info = await stat(targetPath)
   if (!info.isFile() && !info.isDirectory()) throw new Error(`Invalid capability asset: ${targetPath}`)
 }
+await stageRetainedAssetNotices(targetDir)
+selected = withRetainedAssetNoticeManifests(selected)
 await writeFile(resolve(targetDir, 'file-viewer-asset-pack.json'), `${JSON.stringify({
   schemaVersion: 1,
   packageName: packageJson.name,

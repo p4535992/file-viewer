@@ -1,0 +1,10 @@
+# Toolchain that produced the committed src/wasm/chm_wasm_bg.wasm (rustc 1.88.0,
+# commit 6b00bc388, with rust-src). Regenerate the payload only through
+# `pnpm --filter @file-viewer/renderer-chm build:wasm` with wasm-bindgen 0.2.127
+# and Binaryen 132, then update rust/THIRD_PARTY_LICENSES.md. `build` verifies
+# the committed payload against that notice profile instead of rebuilding it.
+[toolchain]
+channel = "1.88.0"
+components = ["rust-src"]
+targets = ["wasm32-unknown-unknown"]
+profile = "minimal"

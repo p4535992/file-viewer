@@ -1,0 +1,10 @@
+File Viewer CAD integration corresponding source
+
+Package release: 3.2.2
+Source archive: https://github.com/flyfish-dev/file-viewer/releases/download/v3.2.0-sources/file-viewer-cad-corresponding-source-3.2.0.tar.gz
+SHA-256: ca91f24f8adf161bc41a787d111afca493f15f2ee15511dc25e5153a7a607b57
+
+This archive reconstructs the CAD JavaScript integration from the original public preferred source, version-specific asset-license descriptors, fixed dependencies and ordinary build scripts.
+It retains complete original license texts and identifies the exact public CAD, DWF and LibreDWG bindings sources in upstream-sources.json.
+The integration output is 622,502 bytes with SHA-256 9d548ef213c59c2ffe81070c7410b1825093817f684ee5353486f409e913f3f5.
+The original component grants, attribution and native source notices remain applicable.

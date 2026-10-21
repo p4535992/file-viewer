@@ -1,9 +1,12 @@
-import { build } from 'esbuild'
+import { build as buildBundle } from 'esbuild'
+import { captureBundleEvidence } from '../../../build-support/bundle-evidence.mjs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const evidence = captureBundleEvidence(buildBundle, packageDir, 'workers')
+const build = options => evidence.build(options)
 const workerOutput = resolve(packageDir, 'dist/hangul.worker.js')
 const parserOutput = resolve(packageDir, 'dist/hangul.parser.js')
 const stripTrailingWhitespace = async filename => {
@@ -36,3 +39,5 @@ await build({
 await Promise.all([workerOutput, parserOutput].map(stripTrailingWhitespace))
 
 console.log('[renderer-hangul] Built standalone module Worker and legacy-bundler-safe parser fallback.')
+
+await evidence.finish()

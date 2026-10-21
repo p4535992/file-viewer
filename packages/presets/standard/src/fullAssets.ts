@@ -11,6 +11,7 @@ import {
   DEFAULT_FILE_VIEWER_PDF_WORKER_PATH,
   DEFAULT_FILE_VIEWER_PRESENTATION_WORKER_PATH,
   DEFAULT_FILE_VIEWER_SPREADSHEET_WORKER_PATH,
+  getDefaultFileViewerAssetBaseUrl,
   resolveFileViewerRuntimeAssetBaseUrl,
 } from '@file-viewer/core/assets';
 import type { FileViewerOptions } from '@file-viewer/core';
@@ -28,6 +29,16 @@ export function normalizeFullAssetBaseUrl(baseUrl?: string | URL | null) {
 
 export function resolveDefaultFullAssetBaseUrl(documentRef?: Document | null) {
   const activeDocument = documentRef ?? (typeof document === 'undefined' ? null : document);
+  const configuredBaseUrl = getDefaultFileViewerAssetBaseUrl();
+  if (configuredBaseUrl) {
+    try {
+      return activeDocument
+        ? new URL(configuredBaseUrl, activeDocument.baseURI || activeDocument.URL).href
+        : configuredBaseUrl;
+    } catch {
+      return configuredBaseUrl;
+    }
+  }
   if (!activeDocument) return DEFAULT_FULL_ASSET_BASE_URL;
   try {
     return new URL(DEFAULT_FULL_ASSET_BASE_PATH, resolveFileViewerRuntimeAssetBaseUrl(activeDocument)).href;

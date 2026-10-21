@@ -200,8 +200,17 @@ const candidateDependencies = new Set(legacyMeasurements.presetDependencies)
 for (const packageName of publishedMinimum) {
   if (!candidateDependencies.has(packageName)) throw new Error(`preset-all removed published 2.4 dependency ${packageName}`)
 }
+const additiveExtensions = new Set()
+for (const addition of legacyFullBaseline.additiveExtensions || []) {
+  const owner = legacyRows.find(row => row.id === addition.rendererId)
+  if (!owner || !owner.extensions.includes(addition.extension)) {
+    throw new Error(`preset-all additive extension ${addition.extension} has no matching existing renderer`)
+  }
+  additiveExtensions.add(addition.extension)
+}
 for (const [key, values] of Object.entries(legacyMeasurements)) {
-  if (legacyFullBaseline.candidateContract[key].count !== values.length || legacyFullBaseline.candidateContract[key].sha256 !== hashList(values)) {
+  const comparable = key === 'extensions' ? values.filter(value => !additiveExtensions.has(value)) : values
+  if (legacyFullBaseline.candidateContract[key].count !== comparable.length || legacyFullBaseline.candidateContract[key].sha256 !== hashList(comparable)) {
     throw new Error(`preset-all compatibility baseline drifted for ${key}; existing full packages are frozen at the published 2.4 matrix`)
   }
 }
@@ -270,7 +279,7 @@ const catalog = {
   },
   frameworkTemplates: {
     web: { defaultVersion: 'browser', runtimeDependencies: {}, viteVersion: '8.0.16', validatedVersions: { browser: { runtimeDependencies: {}, viteVersion: '8.0.16' } } },
-    vue3: { defaultVersion: '3.5.35', runtimeDependencies: { vue: '3.5.35' }, viteVersion: '8.0.16', validatedVersions: { '3.5.35': { runtimeDependencies: { vue: '3.5.35' }, viteVersion: '8.0.16' } } },
+    vue3: { defaultVersion: '3.5.42', runtimeDependencies: { vue: '3.5.42' }, viteVersion: '8.0.16', validatedVersions: { '3.5.42': { runtimeDependencies: { vue: '3.5.42' }, viteVersion: '8.0.16' } } },
     'vue2.7': { defaultVersion: '2.7.16', runtimeDependencies: { vue: '2.7.16' }, viteVersion: '7.1.7', validatedVersions: { '2.7.16': { runtimeDependencies: { vue: '2.7.16' }, viteVersion: '7.1.7' } } },
     'vue2.6': { defaultVersion: '2.6.14', runtimeDependencies: { vue: '2.6.14' }, viteVersion: '6.1.6', validatedVersions: { '2.6.14': { runtimeDependencies: { vue: '2.6.14' }, viteVersion: '6.1.6' } } },
     react: { defaultVersion: '19.2.7', runtimeDependencies: { react: '19.2.7', 'react-dom': '19.2.7' }, viteVersion: '8.0.16', validatedVersions: {

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "mode": "complete-open-source",
+  "sourceVersion": "3.2.1",
+  "baseline": "c4087cc6a3911cfaa9818b0db25893be21bc3be1",
+  "preservedMain": "d466af1af51babb6d37bbf8db715c5497a88a2a1",
+  "functionalSource": "843b9bc169f404a7b4f1351fb31897001b8d91ce",
+  "publishedManifestUnchanged": true,
+  "releasePerformed": false,
+  "sourceOwnerCommit": "27187f9323681c2eee98d864535a3ecd3610a400",
+  "preservedPublishedManifestSha256": "759717dac3c87ba10354d21507dbb19a0d72af2bb6577326c2435105fbc7d4bb",
+  "maintainedChanges": [
+    "PDF cold-worker and bundled fallback recovery",
+    "Word container sniffing and published DOCX 0.3.36 pagination",
+    "Pie and doughnut category legend labels, colors and bounded construction",
+    "Asset attribution and original license grants"
+  ],
+  "contributor": {
+    "pullRequest": 377,
+    "originalCommit": "f22c16b6b827a6a7bc1f5b54797d82c995217fdb",
+    "author": "chaomingWu <41264031+kami-woo@users.noreply.github.com>"
+  },
+  "privateEvidenceIncluded": false,
+  "credentialsIncluded": false,
+  "newNpmOrReleasePublication": false,
+  "mainHistoryResetTo": "c4087cc6a3911cfaa9818b0db25893be21bc3be1",
+  "incorrectRuntimeHistoryMerged": false,
+  "historicalBackupBranch": "backup/public-main-before-source-reset-20261016"
+}

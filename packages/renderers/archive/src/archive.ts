@@ -35,6 +35,7 @@ import {
   type ArchiveEntryView,
 } from './archiveShared.js';
 import { readArchiveCache, writeArchiveCache } from './archiveCache.js';
+import { resolveArchiveLimits } from './archiveLimits.js';
 import {
   hasLikelyGbkZipFilenames,
   isLikelyEncryptedArchive,
@@ -58,8 +59,6 @@ interface ArchiveWorkerCandidate {
   wasmUrl?: string;
 }
 
-const DEFAULT_MAX_ARCHIVE_SIZE = 320 * 1024 * 1024;
-const DEFAULT_MAX_ENTRY_PREVIEW_SIZE = 64 * 1024 * 1024;
 const DEFAULT_WORKER_TIMEOUT_MS = 30000;
 const MAX_LISTED_ENTRIES = 5000;
 
@@ -455,8 +454,7 @@ export default async function renderArchive(
   const archiveOptions = context?.options?.archive;
   const filename = context?.filename || 'archive.bin';
   const sourceExtension = (_type || getArchiveEntryExtension(filename)).toLowerCase();
-  const maxArchiveSize = archiveOptions?.maxArchiveSize || DEFAULT_MAX_ARCHIVE_SIZE;
-  const maxEntryPreviewSize = archiveOptions?.maxEntryPreviewSize || DEFAULT_MAX_ENTRY_PREVIEW_SIZE;
+  const { maxArchiveSize, maxEntryPreviewSize } = resolveArchiveLimits(archiveOptions);
   const cacheEnabled = archiveOptions?.cache !== false;
   const workerTimeoutMs = archiveOptions?.workerTimeoutMs || DEFAULT_WORKER_TIMEOUT_MS;
   const hasLegacyGbkZipFilenames = hasLikelyGbkZipFilenames(buffer, filename);
@@ -920,7 +918,10 @@ export default async function renderArchive(
         ? t('archive.loading.workerFallbackHint')
         : t('archive.loading.directoryReadyHint')
     );
-    const fallbackEntries = await loadArchiveEntriesWithoutWorker(buffer, filename);
+    const fallbackEntries = await loadArchiveEntriesWithoutWorker(buffer, filename, {
+      maxArchiveSize,
+      maxEntryPreviewSize,
+    });
 
     if (!fallbackEntries) {
       return false;

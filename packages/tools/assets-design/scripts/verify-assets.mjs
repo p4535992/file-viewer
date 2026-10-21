@@ -8,6 +8,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
+import { resolveRetainedAssetNoticeSource } from '../../../build-support/retained-asset-notices.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const rendererRequire = createRequire(resolve(packageDir, '../../renderers/design/package.json'))
@@ -62,9 +63,12 @@ for (const asset of assets) {
   const info = await stat(file).catch(() => null)
   assert(info && info.isFile() && info.size > 0, `${asset.defaultPath} is missing from the pack payload (asset ${asset.id})`)
   const bytes = await readFile(file)
-  assert(asset.packagePath, `${asset.id} has no declared package source`)
+  const source = asset.packagePath
+    ? rendererRequire.resolve(asset.packagePath)
+    : resolveRetainedAssetNoticeSource(asset, assets)
+  assert(source, `${asset.id} has no declared package or retained legal source`)
   assert(
-    bytes.equals(await readFile(rendererRequire.resolve(asset.packagePath))),
+    bytes.equals(await readFile(source)),
     `${asset.defaultPath} is stale; rebuild the renderer, sync viewer assets, and stage assets-design`
   )
   if (asset.kind === 'wasm') {

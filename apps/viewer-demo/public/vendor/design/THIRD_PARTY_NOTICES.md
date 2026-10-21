@@ -56,11 +56,17 @@ Source: <https://github.com/nodeca/pako/tree/2.1.0>
 
 The MIT-licensed DEFLATE implementation is bundled transitively through `ag-psd` in the Photoshop document and resource Workers. The complete upstream license is shipped as `LICENSES/pako-MIT.txt`.
 
-## @paged-media/introspect-wasm 0.63.0
+## @paged-media/introspect-wasm 0.70.2
 
-Source: <https://github.com/paged-media/core/tree/v0.63.0>
+Source: <https://github.com/paged-media/core/tree/c7a4b788cc24acd7d5af8843655ec3806ad613a1>, the official npm 0.70.2 `gitHead` and release tag target.
+
+The exact corresponding source archive is <https://codeload.github.com/paged-media/core/tar.gz/c7a4b788cc24acd7d5af8843655ec3806ad613a1> (SHA-256 `58f8eb6e1a0f06b8e2c8babf27d1ae0bad37a21db1ff8243298bdc647eee34a7`). Its IDML import and export dependencies come from <https://codeload.github.com/paged-media/plugin-publish/tar.gz/47ab9d90c8004c32b7d410cc8f2a554b6493a260> (SHA-256 `1053e5d3170d7a8ae01c90534ec7d0dc3821429df84aba6e78cdefedc11cbebe`). Both archives match the immutable Git blobs of those commits.
 
 The package declares `MPL-2.0 OR LicenseRef-PMEL`. File Viewer elects the Mozilla Public License 2.0 option for the distributed JavaScript and WebAssembly runtime. The complete MPL-2.0 text is shipped as `LICENSES/MPL-2.0.txt` and copied next to the self-hosted IDML runtime assets.
+
+The normal Worker build also retains the matching upstream `LICENSE` and `LICENSE.md` in `dist/workers.THIRD_PARTY_LICENSES.txt`, including the copyright attribution and explicit grant of the MPL option. The npm package omits those files; the retained copies are checked against their immutable upstream Git blobs and SHA-256 hashes.
+
+`LICENSES/Introspect_NATIVE_THIRD_PARTY_LICENSES.json` retains the complete collected license texts, copyright notices, immutable source identities, and native byte hashes for the official CPU WASM source configuration. The normal asset build copies this book beside the IDML WASM. Its dependency scope excludes build/dev dependencies and procedural macros and is a conservative source configuration before dead-stripping. The matching Rust standard-library copyright report is retained separately within the book. Preserve the book when copying the WASM for self-hosting.
 
 No public CDN is used. The unmodified `paged_introspect_wasm.js` module is bundled into the IDML Worker and `paged_introspect_wasm_bg.wasm` is distributed as a separate local asset. Any future modification to an MPL-covered upstream file must keep the corresponding source available under MPL-2.0.
 
@@ -82,10 +88,14 @@ Source: <https://github.com/lddubeau/xmlchars/tree/v2.2.0>
 
 The MIT-licensed XML character classifier is bundled transitively through `saxes` in the Adobe container Worker. The complete upstream license is shipped as `LICENSES/xmlchars-MIT.txt`.
 
-## Stet 0.7.0 / stet-wasm 0.2.0
+## Stet 0.8.7 / stet-wasm 0.2.0
 
-Source: <https://github.com/AndyCappDev/stet/tree/3aaf0a76ebd0f9129a715dfa10614d8871d8e965>
+Source: <https://github.com/AndyCappDev/stet/tree/58c7066817f7939789c6f030515c02e94fb0353b>
 
-Stet is licensed under `Apache-2.0 OR MIT`. Both complete license texts are shipped as `LICENSES/Stet-Apache-2.0.txt` and `LICENSES/Stet-MIT.txt`. File Viewer applies the reproducible patch documented in `POSTSCRIPT-WASM.md`: it adds a browser VM cap and virtual-font loading, removes every compiled reference to the upstream URW Base35 assets and Ghostscript `default_cmyk.icc`, and uses the PLRM DeviceCMYK formula fallback. The package does not redistribute those excluded upstream assets.
+Stet is licensed under `Apache-2.0 OR MIT`. Both complete license texts are shipped unchanged as `LICENSES/Stet-Apache-2.0.txt` and `LICENSES/Stet-MIT.txt`. The reproducible build uses unmodified upstream source and resources. Embedded TrueType/OpenType loading and the host VM ceiling use upstream APIs; `source/postscript/stet-safe-browser.patch` is no longer needed.
 
-The embedded substitutes are Carlito, Tinos, Cousine, and Noto Sans Symbols 2. Each is distributed under SIL Open Font License 1.1; the corresponding complete texts are shipped in `LICENSES/*-OFL-1.1.txt`. Font binaries come from Google Fonts commit `ade3d1533e06b2b1462ffcde8e08b129627ca360`, and the Tinos project notice is pinned to `googlefonts/tinos` commit `3b4482a99b80ea5fc75f187b1be3120a3f5905b3`. Exact source hashes are enforced by `scripts/build-postscript-wasm.mjs`.
+The 35 embedded URW Base35 fonts use Stet's SIL Open Font License 1.1 election. `LICENSES/Stet-URW-Fonts-OFL-1.1.txt` preserves the complete upstream notice, original copyright statements, archived 2017 triple-license declaration, and OFL text. The font bytes match `ArtifexSoftware/urw-base35-fonts` commit `3c0ba3b5687632dfc66526544a4e811fe0ec0cd9`; exact hashes are pinned in `source/postscript/upstream.json`. The old Carlito, Tinos, Cousine and Noto Sans Symbols 2 license URLs remain for compatibility; those fonts are no longer embedded.
+
+The embedded CMYK profile is `CGATS001Compat-v2-micro.icc` from Clinton Ingram's Compact ICC Profiles, commit `1fabe4a41bef9bac6e8300748177f783773571cb`, under CC0. It is 8,464 bytes with SHA-256 `73e1ba37d2bad5bab2a964f40a9eed96209666efc067c3322626214bbef234a0`. `LICENSES/Stet-CMYK-Profile.txt` preserves upstream provenance and `LICENSES/CC0-1.0.txt` contains the collection's full legal text. It is not Ghostscript's profile. See `POSTSCRIPT-WASM.md` for the reproducible build and safety boundary.
+
+`LICENSES/Stet_NATIVE_THIRD_PARTY_LICENSES.json` retains 91 packages in the exact locked conservative source profile, including host/build alternatives, with 80 complete original legal materials and the original Rust standard-library source grants. It is bound to the source commit, lock hash and WASM hash; it is not a post-link symbol inventory. Registry legal files are checked against the exact checksum-verified crate archives. The MIT declarations in fax 0.2.6 and fax_derive 0.2.0 omit grant files; the book preserves the unmodified project MIT grant added upstream at `pdf-rs/fax` commit `5d70a161e33b62305f8bce7af3f7fbd011cfaf5d`, with that source recorded explicitly. The jpeg-encoder IJG header and unicode-ident Unicode grant are retained in addition to their MIT/Apache grants. This software is based in part on the work of the Independent JPEG Group.

@@ -29,14 +29,14 @@ case "$(uname -s):$(uname -m)" in
 esac
 
 readonly GITLEAKS_ARCHIVE="gitleaks_${GITLEAKS_VERSION}_${GITLEAKS_PLATFORM}.tar.gz"
-readonly GITLEAKS_URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${GITLEAKS_ARCHIVE}"
 
 scan_tmp_dir="$(mktemp -d)"
 trap 'rm -rf -- "${scan_tmp_dir}"' EXIT
 
-curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
-  --output "${scan_tmp_dir}/${GITLEAKS_ARCHIVE}" \
-  "${GITLEAKS_URL}"
+gh release download "v${GITLEAKS_VERSION}" \
+  --repo gitleaks/gitleaks \
+  --pattern "${GITLEAKS_ARCHIVE}" \
+  --dir "${scan_tmp_dir}"
 
 if command -v sha256sum >/dev/null 2>&1; then
   actual_sha256="$(sha256sum "${scan_tmp_dir}/${GITLEAKS_ARCHIVE}" | awk '{print $1}')"

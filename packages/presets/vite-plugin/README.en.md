@@ -1,5 +1,23 @@
 # @file-viewer/vite-plugin
 
+<!-- FILE_VIEWER_PACKAGE_HEADER -->
+<p>
+  <a href="https://www.npmjs.com/package/@file-viewer/vite-plugin"><img src="https://img.shields.io/npm/v/@file-viewer%2Fvite-plugin?logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@file-viewer/vite-plugin"><img src="https://img.shields.io/npm/dm/@file-viewer%2Fvite-plugin?logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<p>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/">Docs</a> · <a href="https://demo.file-viewer.app/">Live demo</a> · <a href="https://doc.file-viewer.app/guide/formats">Format matrix</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">Issues</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/presets/vite-plugin/README.md">简体中文</a>
+</p>
+
+<p>
+  <a href="https://demo.file-viewer.app/"><img src="https://raw.githubusercontent.com/flyfish-dev/file-viewer/main/docs/public/_media/file-viewer-demo-v3-en.webp" width="760" alt="File Viewer live demo: Word, Excel, PowerPoint, 3D model, CAD drawing and binary inspector"></a>
+</p>
+
+> ⭐ If File Viewer helps you, please [star the repo on GitHub](https://github.com/flyfish-dev/file-viewer).
+
 Vite plugin for Flyfish File Viewer on-demand renderer assembly. It can auto-discover installed `@file-viewer/preset-*` and `@file-viewer/*-full` packages, so Vue, React, Svelte, jQuery, and Vanilla JS components receive matching preview capability without application code passing `renderers` manually. It can also generate `virtual:file-viewer-renderers` from declared formats, import only matching renderer packages, and provide renderer-oriented chunk planning plus offline worker/WASM/font asset copying.
 
 ## Fastest Start
@@ -93,10 +111,10 @@ const options = {
 | `scan` | `true` or `{ roots, extensions, maxFileSize }`; scans source hints and merges formats |
 | `inject` | Defaults to `true`; set `false` to import `virtual:file-viewer-renderers` manually |
 | `chunkStrategy` | `'renderer' | 'none'`; controls renderer-level chunk grouping |
-| `stabilizeInteropChunks` | Defaults to `true`; when the host project already defines a `manualChunks` function, keeps CodeMirror / Lezer / Sandpack in one chunk to avoid production TDZ initialization errors |
+| `stabilizeInteropChunks` | Defaults to `true`; keeps Pako / shared CommonJS helpers and CodeMirror / Lezer / Sandpack in stable groups for default and host-defined chunk splitting |
 | `missingRenderer` | `'error' | 'warn' | 'ignore'`; controls notices for planned renderer mappings |
 
-When host apps split `node_modules` by package name, circular dependencies between `@codemirror/*`, `@lezer/*`, and Sandpack can show up in production as `codemirror-view.* Cannot access ... before initialization`. The plugin wraps existing `manualChunks` functions by default, stabilizes only those known interop chunks, and preserves the rest of the app's custom grouping. Set `stabilizeInteropChunks:false` only when the host build needs total control.
+When host apps split `node_modules` by package name, circular dependencies between `@codemirror/*`, `@lezer/*`, and Sandpack can show up in production as `codemirror-view.* Cannot access ... before initialization`. The plugin stabilizes default chunk splitting and wraps existing `manualChunks` functions. Pako and shared CommonJS helpers use `vendor-commonjs` to prevent compressed-format initialization cycles; CodeMirror / Lezer / Sandpack use `vendor-codemirror`. Other custom groups remain intact, and Vite 8 receives equivalent Rolldown groups. Set `stabilizeInteropChunks:false` only when the host build needs total control.
 
 `copyAssets.baseDir` overrides automatic placement. It must be relative and cannot contain `..`; an empty string explicitly selects the root. The plugin now aligns the shared runtime asset base for standard packages, presets, and full packages; full packages also keep `setDefaultFullAssetBaseUrl()` synchronized. Only integrations that set `inject:false` and do not import the virtual module must call `setDefaultFileViewerAssetBaseUrl()` themselves (plus `setDefaultFullAssetBaseUrl()` for a full package). With Vite `base:'/app/'`, full-package dev URLs start with `/app/file-viewer/...`, while production files remain under `outDir/file-viewer/`.
 
@@ -162,3 +180,15 @@ The plugin currently generates imports for extracted renderer packages: Word, Sp
 
 - On-demand renderer architecture: <https://doc.file-viewer.app/guide/on-demand-renderers>
 - Supported formats: <https://doc.file-viewer.app/guide/formats>
+
+## Formats and related packages
+
+File Viewer previews 275+ file extensions in the browser, covering Office, PDF/OFD, CAD, 3D, archives, email, images, media and code, without server-side conversion. See the [format matrix](https://doc.file-viewer.app/guide/formats) for the full list.
+
+- Components: `@file-viewer/web`, `@file-viewer/vue3`, `@file-viewer/vue2.7`, `@file-viewer/vue2.6`, `@file-viewer/react`, `@file-viewer/react-legacy`, `@file-viewer/svelte`, `@file-viewer/jquery`, plus their `-full` packages
+- Presets: `@file-viewer/preset-lite`, `@file-viewer/preset-office`, `@file-viewer/preset-engineering`, `@file-viewer/preset-all`
+- Build: `@file-viewer/vite-plugin`, `file-viewer-copy-assets`
+
+## License
+
+This package is Apache-2.0. See [LICENSE](https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE).

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import initStet, {
-  configure_limits,
+  set_max_vm,
   create_interpreter,
   page_count,
   page_dimensions,
@@ -125,7 +125,7 @@ const openDocument = async (
     initializedWasmUrl = wasmUrl
   }
   const interpreter = create_interpreter()
-  configure_limits(interpreter, limits.maxVmBytes)
+  set_max_vm(interpreter, limits.maxVmBytes)
   try {
     const referenceDpi = 72
     render(interpreter, new Uint8Array(buffer), referenceDpi, filename)
@@ -154,10 +154,10 @@ const openDocument = async (
     documentSession = { interpreter, limits, pages }
     return {
       engine: 'stet-wasm',
-      engineVersion: '0.7.0+file-viewer-safe.1',
+      engineVersion: '0.8.7',
       renderBackend: 'cpu-tiny-skia',
-      colorFallback: 'plrm-device-cmyk',
-      fontSubstitutes: ['Carlito', 'Tinos', 'Cousine', 'Noto Sans Symbols 2'],
+      colorProfile: 'CGATS001Compat-v2-micro (CC0)',
+      fontSubstitutes: ['URW Base35 (OFL-1.1)'],
       pages,
     }
   } catch (error) {

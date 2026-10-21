@@ -94,14 +94,14 @@ export default async function renderPostscript(
         page: '页',
         fit: '适合窗口',
         loading: '正在格式化页面',
-        ready: 'Stet CPU WASM · OFL 替代字体 · PLRM CMYK',
+        ready: 'URW Base35 字体 · ICC CMYK',
       }
     : {
         title: type.toLowerCase() === 'eps' ? 'Adobe EPS' : 'Adobe PostScript',
         page: 'Page',
         fit: 'Fit',
         loading: 'Rasterizing page',
-        ready: 'Stet CPU WASM · OFL substitute fonts · PLRM CMYK',
+        ready: 'URW Base35 fonts · ICC CMYK',
       }
 
   const style = element(documentRef, 'style')
@@ -110,7 +110,7 @@ export default async function renderPostscript(
   root.dataset.postscriptEngine = opened.engine
   root.dataset.postscriptBackend = opened.renderBackend
   root.dataset.pageCount = String(opened.pages.length)
-  root.dataset.colorFallback = opened.colorFallback
+  root.dataset.colorProfile = opened.colorProfile
   const toolbar = element(documentRef, 'header', 'postscript-toolbar')
   const title = element(documentRef, 'div', 'postscript-title')
   title.append(
@@ -422,12 +422,13 @@ export default async function renderPostscript(
     code: 'postscript-wasm-bounded-preview',
     level: 'info',
     message:
-      'EPS/PS preview runs in a terminating Worker with a VM cap, OFL substitute fonts, and PLRM DeviceCMYK fallback; it is not claimed to match every Adobe PostScript Level 3 extension.',
+      'EPS/PS preview runs in a terminating Worker with a VM cap, URW Base35 OFL fonts, and a CC0 CMYK profile; it is not claimed to match every Adobe PostScript Level 3 extension.',
     detail: {
       engine: opened.engineVersion,
       pages: opened.pages.length,
       maxVmBytes: limits.maxVmBytes,
       fontSubstitutes: opened.fontSubstitutes,
+      colorProfile: opened.colorProfile,
     },
   })
 

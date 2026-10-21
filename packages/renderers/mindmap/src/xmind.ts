@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
-import Panzoom, { type PanzoomObject } from '@panzoom/panzoom';
+import Panzoom from '@panzoom/panzoom/dist/panzoom.es.js';
+import type { PanzoomObject } from '@panzoom/panzoom';
 import {
   parseXmind8Xml,
   parseXmind2020Json,

@@ -1,4 +1,8 @@
 /apps/chrome-extension/
+/scripts/
+/.release/
+/.agents/
+/.codex/
 node_modules/
 **/dist/
 apps/docs-site/.next/
@@ -11,6 +15,7 @@ apps/docs-site/next-env.d.ts
 playwright-report/
 test-results/
 /output/
+/.release/
 artifacts/*.tgz
 artifacts/*.tar.gz
 packages/renderers/signature/rust/target/
@@ -35,3 +40,6 @@ examples/*/public/wasm/
 /软件著作权申请资料/
 *.log
 .DS_Store
+
+# Local bundle input receipts are not project source.
+**/.build/

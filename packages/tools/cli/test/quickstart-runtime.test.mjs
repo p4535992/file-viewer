@@ -34,3 +34,14 @@ test('generated Vite project declares and enforces its Node runtime contract', a
   assert.match(guard, /\^20\.19\.0 \|\| >=22\.12\.0/)
   assert.match(guard, /remove node_modules, and reinstall dependencies/)
 })
+
+test('every quickstart keeps lazy module Workers compatible with older Vite versions', async (t) => {
+  for (const framework of ['web', 'vue3', 'vue2.7', 'vue2.6', 'react', 'react-legacy', 'svelte', 'jquery']) {
+    const root = await createRoot(t)
+    await scaffoldFileViewerQuickstart(root, { framework, profile: 'full' }, { write: true })
+    const config = await readFile(join(root, 'vite.config.mjs'), 'utf8')
+    assert.match(config, /worker: \{ format: 'es' \}/)
+    if (framework === 'svelte') assert.match(config, /plugins: \[svelte\(\)\]/)
+    else assert.doesNotMatch(config, /vite-plugin-svelte/)
+  }
+})

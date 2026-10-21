@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { build } from 'esbuild'
-import { readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -42,8 +42,11 @@ if (check) {
     previous === code,
     'MapLibre worker source is stale. Run `pnpm --filter @file-viewer/renderer-geo build` and commit the generated source.'
   )
-} else if (previous !== code) {
-  await writeFile(output, code)
+} else {
+  if (previous !== code) await writeFile(output, code)
+  const legalDirectory = resolve(root, 'dist/vendor')
+  await mkdir(legalDirectory, { recursive: true })
+  await writeFile(resolve(legalDirectory, 'maplibre-worker.LICENSE.txt'), upstreamLicense)
 }
 console.log(
   `[renderer-geo] ${check ? 'Verified' : 'Bundled'} ${result.outputFiles[0].contents.length} worker bytes without external imports.`

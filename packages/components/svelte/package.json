@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/svelte",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Standard Svelte component package for File Viewer",
@@ -15,9 +15,9 @@
     "file-preview",
     "self-hosted"
   ],
-  "svelte": "./src/FileViewer.svelte",
-  "main": "./src/FileViewer.svelte",
-  "module": "./src/FileViewer.svelte",
+  "svelte": "./dist/FileViewer.client.js",
+  "main": "./dist/FileViewer.client.js",
+  "module": "./dist/FileViewer.client.js",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
@@ -39,13 +39,19 @@
     "type": "individual",
     "url": "https://dev.flyfish.group/donate?source=npm"
   },
-  "types": "./src/FileViewer.svelte.d.ts",
+  "types": "./dist/runtime-types.d.ts",
   "exports": {
     ".": {
-      "types": "./src/FileViewer.svelte.d.ts",
-      "svelte": "./src/FileViewer.svelte",
-      "import": "./src/FileViewer.svelte",
-      "default": "./src/FileViewer.svelte"
+      "types": "./dist/runtime-types.d.ts",
+      "svelte": {
+        "browser": "./dist/FileViewer.client.js",
+        "node": "./dist/FileViewer.server.js",
+        "default": "./dist/FileViewer.client.js"
+      },
+      "browser": "./dist/FileViewer.client.js",
+      "node": "./dist/FileViewer.server.js",
+      "import": "./dist/FileViewer.client.js",
+      "default": "./dist/FileViewer.client.js"
     },
     "./action": {
       "types": "./dist/index.d.ts",
@@ -66,23 +72,21 @@
   },
   "files": [
     "dist",
-    "src/FileViewer.svelte",
-    "src/FileViewer.svelte.d.ts",
-    "src/controller.ts",
     "README.md",
     "README.en.md"
   ],
   "scripts": {
-    "build": "tsc -b tsconfig.json",
+    "build": "tsc -b tsconfig.json && node ../../../.github/scripts/build-svelte-runtime.mjs --package-root .",
     "type-check": "tsc -b tsconfig.json"
   },
   "peerDependencies": {
     "svelte": ">=3.59 <6"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.1.2"
+    "@file-viewer/core": "workspace:3.2.2"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
     "svelte": "^5.57.0",
     "typescript": "^6.0.3"
   },

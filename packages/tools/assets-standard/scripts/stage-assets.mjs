@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { stageRetainedAssetNotices, withRetainedAssetNoticeManifests } from '../../../build-support/retained-asset-notices.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const sourceRoot = resolve(packageDir, '../../..')
@@ -32,7 +33,7 @@ for (const packageName of profile.capabilityPackages) {
   capability.assets.rendererIds.forEach(id => rendererIds.add(id))
 }
 const sourceManifest = JSON.parse(await readFile(resolve(sourceDir, manifestFilename), 'utf8'))
-const selected = sourceManifest.rendererAssetManifests.filter(item => rendererIds.has(item.rendererId))
+let selected = sourceManifest.rendererAssetManifests.filter(item => rendererIds.has(item.rendererId))
 const found = new Set(selected.map(item => item.rendererId))
 const missing = [...rendererIds].filter(id => !found.has(id))
 if (missing.length) throw new Error(`Standard asset manifests are missing renderer ids: ${missing.join(', ')}`)
@@ -52,6 +53,8 @@ for (const asset of selected.flatMap(item => item.assets)) {
   const info = await stat(targetPath)
   if (!info.isFile() && !info.isDirectory()) throw new Error(`Invalid standard asset: ${targetPath}`)
 }
+await stageRetainedAssetNotices(targetDir)
+selected = withRetainedAssetNoticeManifests(selected)
 await writeFile(resolve(targetDir, manifestFilename), `${JSON.stringify({
   schemaVersion: 1,
   packageName: packageJson.name,

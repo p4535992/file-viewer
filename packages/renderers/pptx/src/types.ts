@@ -1,4 +1,5 @@
 import type { PptxPresentationLabels, PptxPresentationState } from './presentation';
+import type { PptxChartCollection } from './chart-types';
 
 export type PptxFitMode = 'contain' | 'none';
 
@@ -92,5 +93,5 @@ export interface PptxWorkerMessage {
   data?: unknown;
   slide_num?: number;
   file_name?: string;
-  charts?: unknown;
+  charts?: PptxChartCollection;
 }

@@ -34,6 +34,11 @@ export interface SpreadsheetParserContext {
   cellImages: Record<string, SheetCellImage[]>;
 }
 
+export interface SpreadsheetWorkbookSource extends SpreadsheetTextSource {
+  /** Retain truly empty sheets only for the opt-in Excel viewport grid. */
+  includeEmptySheets?: boolean;
+}
+
 export interface SpreadsheetWorkerRequest {
   type: string;
   payload?: Record<string, any>;
@@ -383,7 +388,7 @@ export const getWorksheetDisplayBounds = (
   };
 };
 
-const parseSheets = (context: SpreadsheetParserContext): SpreadsheetWorkerResponse[] => {
+const parseSheets = (context: SpreadsheetParserContext, includeEmptySheets = false): SpreadsheetWorkerResponse[] => {
   const workbook = context.workbook;
   if (!workbook?.SheetNames) {
     return [];
@@ -393,7 +398,8 @@ const parseSheets = (context: SpreadsheetParserContext): SpreadsheetWorkerRespon
   context.sheets = workbook.SheetNames.reduce<SheetDefinition[]>((result, name, sourceIndex) => {
     const worksheet = workbook.Sheets[name] as WorksheetRangeLike | undefined;
     const bounds = getWorksheetDisplayBounds(worksheet, context.charts[name]);
-    if (!worksheet?.['!ref'] && !bounds.observedRowCount && !bounds.observedColCount) {
+    const empty = !worksheet?.['!ref'] && !bounds.observedRowCount && !bounds.observedColCount;
+    if (!worksheet || (empty && !includeEmptySheets)) {
       return result;
     }
     if (bounds.trimmed) {
@@ -406,8 +412,8 @@ const parseSheets = (context: SpreadsheetParserContext): SpreadsheetWorkerRespon
       id: result.length,
       name,
       hidden: !!workbookSheets[sourceIndex]?.Hidden,
-      rowCount: bounds.rowCount,
-      colCount: bounds.colCount,
+      rowCount: empty ? 0 : bounds.rowCount,
+      colCount: empty ? 0 : bounds.colCount,
     });
     return result;
   }, []);
@@ -418,7 +424,7 @@ const parseSheets = (context: SpreadsheetParserContext): SpreadsheetWorkerRespon
 export const parseSpreadsheetWorkbook = async (
   context: SpreadsheetParserContext,
   data: ArrayBuffer,
-  source: SpreadsheetTextSource = {}
+  source: SpreadsheetWorkbookSource = {}
 ): Promise<SpreadsheetWorkerResponse[]> => {
   try {
     const input = prepareSpreadsheetReadInput(data, source);
@@ -441,7 +447,7 @@ export const parseSpreadsheetWorkbook = async (
       context.charts = {};
       context.cellImages = {};
     }
-    return parseSheets(context);
+    return parseSheets(context, source.includeEmptySheets);
   } catch (error) {
     return [toErrorResponse(error)];
   }
@@ -625,6 +631,7 @@ export const handleSpreadsheetWorkerRequest = (
         fileType: request.payload?.fileType,
         filename: request.payload?.filename,
         textEncoding: request.payload?.textEncoding,
+        includeEmptySheets: request.payload?.includeEmptySheets,
       });
     case 'parseSheet':
       return parseSpreadsheetSheet(context, request.payload);

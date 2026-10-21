@@ -1489,14 +1489,12 @@ export async function scaffoldFileViewerQuickstart(
           ] as const
         ]
       : []),
-    ...(config.framework === 'svelte'
-      ? [
-          [
-            'vite.config.mjs',
-            `import { defineConfig } from 'vite';\nimport { svelte } from '@sveltejs/vite-plugin-svelte';\nexport default defineConfig({ plugins: [svelte()] });\n`
-          ] as const
-        ]
-      : []),
+    [
+      'vite.config.mjs',
+      config.framework === 'svelte'
+        ? `import { defineConfig } from 'vite';\nimport { svelte } from '@sveltejs/vite-plugin-svelte';\nexport default defineConfig({ plugins: [svelte()], worker: { format: 'es' } });\n`
+        : `import { defineConfig } from 'vite';\nexport default defineConfig({ worker: { format: 'es' } });\n`
+    ],
     ...(config.packageManager === 'yarn' &&
     Number(config.packageManagerVersion?.match(/^(\d+)/)?.[1] ?? 0) >= 2
       ? [['.yarnrc.yml', 'nodeLinker: node-modules\nenableGlobalCache: true\n'] as const]

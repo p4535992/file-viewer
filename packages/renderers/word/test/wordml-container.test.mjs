@@ -35,8 +35,11 @@ test('WordML becomes a package with local header/footer relationships, styles an
   const file = await convert(bytes(document))
   const main = await file.file('word/document.xml').async('string')
   const footer = await file.file('word/footer1.xml').async('string')
-  assert.ok(main.includes(wn))
-  assert.ok(!main.includes(ns))
+  const parsed = new JSDOM(main, { contentType: 'application/xml' })
+  try {
+    assert.equal(parsed.window.document.documentElement.namespaceURI, wn)
+    assert.equal(parsed.window.document.getElementsByTagNameNS(ns, '*').length, 0)
+  } finally { parsed.window.close() }
   assert.match(main, /footerReference/)
   assert.match(main, /w:type="default"/)
   assert.match(footer, /  Example &amp; text  /)
@@ -66,7 +69,11 @@ test('WordML embedded images use local package relationships, never external ima
   assert.deepEqual(Array.from(await file.file('word/media/image1.png').async('uint8array')), [1, 2, 3])
   const main = await file.file('word/document.xml').async('string')
   assert.match(main, /r:id="rId1"/)
-  assert.ok(!main.includes('https://example.invalid'))
+  const parsed = new JSDOM(main, { contentType: 'application/xml' })
+  try {
+    assert.equal(parsed.window.document.querySelectorAll('[src], [href]').length, 0)
+  } finally { parsed.window.close() }
+  assert.equal(Buffer.from(main).indexOf(Buffer.from('https://example.invalid/private.png')), -1)
   assert.ok(!main.includes('binData'))
   assert.match(await file.file('word/_rels/document.xml.rels').async('string'), /Target="media\/image1.png"/)
 })

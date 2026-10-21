@@ -1,5 +1,23 @@
 # @file-viewer/web-full
 
+<!-- FILE_VIEWER_PACKAGE_HEADER -->
+<p>
+  <a href="https://www.npmjs.com/package/@file-viewer/web-full"><img src="https://img.shields.io/npm/v/@file-viewer%2Fweb-full?logo=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@file-viewer/web-full"><img src="https://img.shields.io/npm/dm/@file-viewer%2Fweb-full?logo=npm" alt="npm downloads"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&logo=github" alt="GitHub stars"></a>
+  <a href="https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
+</p>
+
+<p>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/zh/">文档</a> · <a href="https://demo.file-viewer.app/">在线 Demo</a> · <a href="https://doc.file-viewer.app/guide/formats">格式矩阵</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">问题反馈</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/components/web-full/README.en.md">English</a>
+</p>
+
+<p>
+  <a href="https://demo.file-viewer.app/"><img src="https://raw.githubusercontent.com/flyfish-dev/file-viewer/main/docs/public/_media/file-viewer-demo-v3-zh.webp" width="760" alt="File Viewer 在线演示：Word、Excel、PPT、3D 模型、CAD 图纸与二进制检查器"></a>
+</p>
+
+> ⭐ 如果 File Viewer 对你有帮助，欢迎到 [GitHub](https://github.com/flyfish-dev/file-viewer) 点个 Star。
+
 Vanilla JS / Pure Web Full 一站式集成包，保持 v2.4 已发布 Full 能力矩阵和默认资产复制行为，包括 iWork、CAD、3D、EDA、Geo、Typst、Drawing、Hangul、WordPerfect 与旧版 PPT。DICOM 及以后新增的重型格式不会自动进入历史 Full 闭包，需要通过 `@file-viewer/cli` 显式添加。
 
 ```bash
@@ -8,8 +26,14 @@ npm install @file-viewer/web-full
 
 ## RequireJS
 
-从 3.0.3 起可直接加载 `dist/flyfish-file-viewer-web-full.amd.js`。完整部署 `dist/`，
-保留同级 `renderers/`、`vendor/`、`wasm/`，不需要 shim 或覆盖宿主 `define`。
+从 3.0.3 起可直接加载 `dist/flyfish-file-viewer-web-full.amd.js`，不需要 shim 或覆盖宿主 `define`。
+从 npm 安装后，先运行 `npx --no-install file-viewer-copy-assets ./public/file-viewer`，
+再把 `dist/` 内的入口和 `renderers/` 复制到同一目录。复制命令会从同版本的
+`@file-viewer/assets-cad` 和 `@file-viewer/assets-drawing` 依赖补齐 CAD 与 Draw.io 资源。
+GitHub 完整离线发行物仍包含全部资产。
+
+通过 jsDelivr 或 unpkg 加载 IIFE/AMD 时，CAD 和 Draw.io 资源从所选 CDN 的同版本资产包读取。
+自托管部署继续使用本地资源；显式资源 URL 和 `setDefaultFullAssetBaseUrl()` 可覆盖默认位置。
 
 ```js
 require.config({ paths: { viewer: '/file-viewer/flyfish-file-viewer-web-full.amd' } })
@@ -46,7 +70,7 @@ require(['viewer'], viewer => {
 
 ## 格式支持矩阵
 
-历史兼容 Full 默认注册 221 个扩展名（221 个稳定、0 个实验），映射到 32 条预览链路，与 v2.4 已发布能力一致。当前总目录为 274 个扩展名、47 条预览链路；DICOM 等新增重型格式必须通过 CLI 显式添加，不会自动扩张旧 Full。
+历史兼容 Full 默认 handler 可预览 223 个扩展名（223 个稳定、0 个实验），映射到 33 条预览链路，包含已复核的 CHM 与 LRC 兼容增量。当前总目录为 275 个扩展名、47 条预览链路；DICOM 等新增重型格式必须通过 CLI 显式添加，不会自动扩张旧 Full。
 
 | 预览链路 | 分类 | 扩展名 | 等级 / 状态 | 能力 | 加载 |
 | --- | --- | --- | --- | --- | --- |
@@ -66,6 +90,7 @@ require(['viewer'], viewer => {
 | Hancom Hangul | office | `.hwp`, `.hwpx` | structured / stable | 下载, 打印(适配器), HTML(适配器), 缩放(Provider), 搜索 | 按需异步 |
 | Typst | document | `.typ`, `.typst` | high-fidelity / stable | 下载, 打印(适配器), HTML(适配器), 缩放(Provider), 搜索 | 按需异步 |
 | Archive | archive | `.zip`, `.zipx`, `.7z`, `.rar`, `.tar`, `.gz`, `.gzip`, `.tgz`, `.bz2`, `.bzip2`, `.tbz`, `.tbz2`, `.xz`, `.txz`, `.lzma`, `.zst`, `.tzst`, `.cab`, `.ar`, `.cpio`, `.iso`, `.xar`, `.lha`, `.lzh`, `.jar`, `.war`, `.ear`, `.apk`, `.cbz`, `.cbr` | structured / stable | 下载, 搜索 | 按需异步 |
+| Compiled HTML Help | ebook | `.chm` | structured / stable | 下载, 打印(适配器), HTML(适配器), 搜索 | 按需异步 |
 | Email | email | `.eml`, `.msg`, `.mbox` | structured / stable | 下载, HTML, 搜索 | 按需异步 |
 | EDA | eda | `.olb`, `.dra`, `.gds`, `.oas`, `.oasis` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
 | CAD | cad | `.dxf`, `.dwg`, `.dwf`, `.dwfx`, `.xps` | high-fidelity / stable | 下载, 打印, HTML, 缩放(Provider) | 按需异步 |
@@ -78,14 +103,14 @@ require(['viewer'], viewer => {
 | UMD | ebook | `.umd` | structured / stable | 下载, 打印, HTML, 缩放(Provider), 搜索 | 按需异步 |
 | Image | image | `.gif`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`, `.tif`, `.png`, `.svg`, `.webp`, `.avif`, `.ico`, `.heic`, `.heif`, `.jxl` | high-fidelity / stable | 下载, 打印, HTML, 缩放(Provider) | 按需异步 |
 | Markdown | markdown | `.md`, `.markdown` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
-| Code and Text | code | `.txt`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
+| Code and Text | code | `.txt`, `.lrc`, `.json`, `.js`, `.mjs`, `.cjs`, `.css`, `.java`, `.py`, `.html`, `.htm`, `.jsx`, `.ts`, `.tsx`, `.xml`, `.log`, `.vue`, `.yaml`, `.yml`, `.ini`, `.sh`, `.bash`, `.sql`, `.go`, `.rs`, `.php`, `.c`, `.cpp`, `.cc`, `.h`, `.hpp`, `.cs`, `.diff`, `.patch`, `.bundle`, `.bdl`, `.jsonc`, `.json5`, `.ipynb`, `.toml`, `.proto`, `.hcl`, `.tex`, `.gv`, `.http`, `.react`, `.rb`, `.swift`, `.kt` | structured / stable | 下载, 打印, HTML, 搜索 | 按需异步 |
 | Video | media | `.mp4`, `.webm`, `.m3u8` | high-fidelity / stable | 下载 | 按需异步 |
 | Audio | media | `.mp3`, `.mpeg`, `.wav`, `.ogg`, `.oga`, `.opus`, `.m4a`, `.aac`, `.flac`, `.weba`, `.midi`, `.mid` | high-fidelity / stable | 下载 | 按需异步 |
 | Data Asset | asset | `.ttf`, `.otf`, `.woff`, `.woff2`, `.psd`, `.ai`, `.eps`, `.sqlite`, `.wasm`, `.parquet`, `.avro`, `.webarchive` | structured / stable | 下载, HTML, 搜索 | 按需异步 |
 
 ## 兼容 Full 包快速开始
 
-`@file-viewer/web-full` 继续内置 `@file-viewer/preset-all`，保持 v2.4 已发布的 221 个扩展名、32 条预览链路及默认资产复制行为。现有 iWork、CAD、3D、EDA、Geo、Typst、Drawing、WordPerfect、Hangul、旧版 PPT、RTF、Mermaid、HLS/MIDI 和高级文本能力不会被移除。DICOM 及以后新增的重型格式不自动进入历史 Full。
+`@file-viewer/web-full` 继续内置 `@file-viewer/preset-all`，当前 Full 的实际 handler 提供 223 个扩展名、33 条预览链路，并保留默认资产复制行为。现有 iWork、CAD、3D、EDA、Geo、Typst、Drawing、WordPerfect、Hangul、旧版 PPT、RTF、Mermaid、HLS/MIDI 和高级文本能力不会被移除。DICOM 及以后新增的重型格式不自动进入历史 Full。
 
 保持同一历史 Full 契约的 8 个官方包是：`@file-viewer/web-full`、`@file-viewer/vue3-full`、`@file-viewer/vue2.7-full`、`@file-viewer/vue2.6-full`、`@file-viewer/react-full`、`@file-viewer/react-legacy-full`、`@file-viewer/jquery-full`、`@file-viewer/svelte-full`。新项目如果不需要完整矩阵，应优先通过 `@file-viewer/cli` 选择 standard、lite、office、engineering 或自定义能力；已有 Full 用户无需改变原安装方式。
 
@@ -123,7 +148,7 @@ npx --no-install file-viewer-copy-assets ./public/file-viewer
 
 默认资源目录是 `<部署基址>/file-viewer/`，根部署时 URL 为 `/file-viewer/`。只有资源不在这个约定目录时，才需要调用 `setDefaultFullAssetBaseUrl()`；显式 `options.*Url` 仍保持最高优先级。
 
-`@file-viewer/web-full` 的 CDN/IIFE 发行物只包含入口和按格式加载的 renderer chunks，不重复内嵌 Worker/WASM 资产。部署时使用包内置的兼容复制命令发布历史 Full 资产；DICOM 等新增能力仍需独立安装。
+`@file-viewer/web-full` 的 npm 发行物通过同版本资产包携带 CAD 和 Draw.io，其余资产与入口、按格式加载的 renderer chunks 保留在 `dist/`。包内置的复制命令会合并完整离线资产；直接使用 jsDelivr 或 unpkg 时，CAD 和 Draw.io 从所选 CDN 的同版本资产包加载。自托管资源仍使用本地部署位置。DICOM 等新增能力需独立安装。
 
 ## 统一参数与事件
 
@@ -307,3 +332,15 @@ setDefaultFullAssetBaseUrl('/static/file-viewer/')
 
 在线 Demo: https://demo.file-viewer.app/ 。File Viewer 自身源码与本仓生成的组件包使用 Apache-2.0；发行物若包含 `@file-viewer/ppt` 运行时，该运行时保留其独立 LICENSE 与 NOTICE，不被 Apache-2.0 重新许可。二开或商用请保留 Flyfish Viewer 来源说明；如果修复了通用兼容问题，也欢迎贡献回对应组件仓库。
 <!-- FILE_VIEWER_GENERATED:END -->
+
+## 格式与相关包
+
+File Viewer 在浏览器内预览 275+ 种扩展名，覆盖 Office、PDF/OFD、CAD、3D、压缩包、邮件、图片、音视频和代码，无需服务端转码；完整清单见 [格式矩阵](https://doc.file-viewer.app/guide/formats)。
+
+- 组件：`@file-viewer/web`、`@file-viewer/vue3`、`@file-viewer/vue2.7`、`@file-viewer/vue2.6`、`@file-viewer/react`、`@file-viewer/react-legacy`、`@file-viewer/svelte`、`@file-viewer/jquery`，以及对应的 `-full` 包
+- 能力组合：`@file-viewer/preset-lite`、`@file-viewer/preset-office`、`@file-viewer/preset-engineering`、`@file-viewer/preset-all`
+- 构建：`@file-viewer/vite-plugin`、`file-viewer-copy-assets`
+
+## 许可证
+
+本包采用 Apache-2.0。`*-full` 包包含 `@flyfish-dev/cad-viewer` 等 DWG/DWF/DWFX 运行时，该部分采用 **AGPL-3.0-only**，使用 CAD 能力时请遵守其许可证。详见 [LICENSE](https://github.com/flyfish-dev/file-viewer/blob/main/LICENSE)。

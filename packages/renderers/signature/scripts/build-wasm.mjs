@@ -2,6 +2,7 @@ import { brotliCompressSync, constants as zlibConstants } from 'node:zlib'
 import { execFileSync } from 'node:child_process'
 import { access, mkdir, readFile, rm } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { resolveWasmOpt } from '../../../../.github/scripts/lib/pinned-pnpm.mjs'
 
@@ -32,7 +33,17 @@ try {
   console.warn('[renderer-signature] Cargo.lock is missing; generating it before the locked build.')
   run('cargo', ['generate-lockfile'])
 }
-run('cargo', ['build', '--release', '--locked', '--target', 'wasm32-unknown-unknown'])
+const buildEnvironment = { ...process.env }
+if (process.env.FILE_VIEWER_DISTRIBUTION_MODE === 'runtime-only') {
+  const existing = process.env.CARGO_ENCODED_RUSTFLAGS ?? process.env.RUSTFLAGS?.trim().split(/\s+/).join('\x1f') ?? ''
+  const prefixes = new Set([homedir(), packageDir,
+    resolve(process.env.CARGO_HOME || resolve(homedir(), '.cargo')),
+    execFileSync('rustc', ['--print', 'sysroot'], { encoding: 'utf8' }).trim()])
+  buildEnvironment.CARGO_ENCODED_RUSTFLAGS = [existing,
+    ...[...prefixes].map(prefix => `--remap-path-prefix=${prefix}=/file-viewer-rpgp-build`)]
+    .filter(Boolean).join('\x1f')
+}
+run('cargo', ['build', '--release', '--locked', '--target', 'wasm32-unknown-unknown'], { env: buildEnvironment })
 run('wasm-bindgen', [
   wasmInput,
   '--target',

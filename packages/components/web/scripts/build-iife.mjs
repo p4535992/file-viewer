@@ -4,12 +4,16 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'vite'
 import { isolateAmd, writeAmdEntry } from './amd-entry.mjs'
+import { writeBundleInventory } from '../../../build-support/bundle-inventory.mjs'
+import { writeBundleNotices } from '../../../build-support/bundle-notices.mjs'
+import { bundleInputPlugin } from '../../../build-support/rollup-bundle-inputs.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const entry = join(packageDir, 'src', 'global.ts')
 const excalidrawStub = join(packageDir, 'scripts', 'excalidraw-iife-stub.ts')
 const outDir = join(packageDir, 'dist')
 const fileName = 'flyfish-file-viewer-web.iife.js'
+const bundledInputs = new Set()
 
 if (!existsSync(entry)) {
   throw new Error(`Missing web global entry: ${entry}`)
@@ -21,6 +25,8 @@ await build({
   configFile: false,
   publicDir: false,
   logLevel: 'warn',
+  plugins: [bundleInputPlugin(bundledInputs)],
+  worker: { plugins: () => [bundleInputPlugin(bundledInputs)] },
   define: {
     'process.env.NODE_ENV': JSON.stringify('production'),
     'process.env': JSON.stringify({ NODE_ENV: 'production' })
@@ -56,5 +62,8 @@ await build({
 })
 
 await writeAmdEntry(join(outDir, fileName), 'FlyfishFileViewerWeb')
+await writeBundleInventory([...bundledInputs], join(packageDir, '.build/iife-inputs.json'))
+await writeBundleNotices({ inputs: Object.fromEntries([...bundledInputs].map(path => [path, {}])) },
+  join(outDir, 'THIRD_PARTY_LICENSES.txt'))
 
 console.log(`[web-iife] Built ${join(outDir, fileName)}`)

@@ -1,5 +1,6 @@
 import {
   appendFileViewerStyle,
+  cloneFileViewerViewState,
   applyFileViewerZoomAvailability,
   createViewer,
   isFileViewerShadowRoot,
@@ -783,15 +784,7 @@ export const mountViewer = (
       : null,
     zoom: state.zoom ? { ...state.zoom } : null,
     location: state.location ? { ...state.location } : null,
-    viewState: state.viewState
-      ? {
-          ...state.viewState,
-          zoom: state.viewState.zoom ? { ...state.viewState.zoom } : undefined,
-          scroll: state.viewState.scroll ? { ...state.viewState.scroll } : undefined,
-          navigation: state.viewState.navigation ? { ...state.viewState.navigation } : undefined,
-          extra: state.viewState.extra ? { ...state.viewState.extra } : undefined,
-        }
-      : null,
+    viewState: cloneFileViewerViewState(state.viewState),
   });
   const syncShellTheme = () => {
     shell.dataset.viewerTheme = normalizeFileViewerTheme(currentOptions.options?.theme);

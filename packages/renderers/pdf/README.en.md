@@ -1,5 +1,10 @@
 # @file-viewer/renderer-pdf
 
+Cold-network loading starts the real Worker directly, without a duplicate version-probe request.
+PDF.js checks API compatibility before parsing. Mismatched workers are destroyed and retried
+with the bundled matching handler without losing transferred input. Main-thread fallbacks
+use asynchronous resource fetching instead of synchronous binary XHR.
+
 Standalone PDF renderer package for Flyfish File Viewer. It is powered by PDF.js and provides page rendering, navigation, outline, search, zoom, print, and HTML export support.
 
 ## Usage
@@ -42,7 +47,7 @@ const options = {
 }
 ```
 
-When no explicit PDF asset URL is configured, the renderer first uses the public base exposed by build tools such as Vite and can fall back to the page entry script. An app deployed under `/workspace/` therefore still requests `/workspace/vendor/pdf/pdf.worker.mjs` while its current SPA route is `/workspace/c/`. UMI, custom proxies, and builds whose public path cannot be detected can set `pdf.assetBaseUrl: '/workspace/'` to pin the base for every PDF offline asset. Before creating a static Worker, the renderer reads the official PDF.js version marker; a stale Worker from an older deployment is rejected and the packaged same-version handler is used instead. If the host app did not run `file-viewer-copy-assets`, does not use `@file-viewer/vite-plugin`, or a local dev server falls back to HTML for that path, the same fallback prevents `Setting up fake worker failed`. For best performance, complete cMap/standard-font/WASM decoding, or strict offline deployments, still copy viewer assets and point these URLs at real static files. The pinned PDF.js 5.4 stable line loads local JBIG2, JPEG 2000, color-management, and related helpers through `wasmUrl`; viewer assets and the Vite plugin copy them without relying on the public internet.
+When no explicit PDF asset URL is configured, the renderer first uses the public base exposed by build tools such as Vite and can fall back to the page entry script. An app deployed under `/workspace/` therefore still requests `/workspace/vendor/pdf/pdf.worker.mjs` while its current SPA route is `/workspace/c/`. UMI, custom proxies, and builds whose public path cannot be detected can set `pdf.assetBaseUrl: '/workspace/'` to pin the base for every PDF offline asset. The real Worker checks API compatibility before parsing. An incompatible Worker is destroyed and retried with the packaged matching handler, without a separate version-probe request. If the host app did not run `file-viewer-copy-assets`, does not use `@file-viewer/vite-plugin`, or a local dev server falls back to HTML for that path, the same fallback prevents `Setting up fake worker failed`. For best performance, complete cMap/standard-font/WASM decoding, or strict offline deployments, still copy viewer assets and point these URLs at real static files. The pinned PDF.js 5.4 stable line loads local JBIG2, JPEG 2000, color-management, and related helpers through `wasmUrl`; viewer assets and the Vite plugin copy them without relying on the public internet.
 
 `cjkFontFallback` is enabled by default. When a PDF references `MicrosoftYaHei-Bold`, SimSun, SimHei, or another CJK font without embedding the font program, the renderer prefers an installed system font and otherwise aliases the original PDF font name to the local Noto Sans SC variable font supplied by `@file-viewer/assets-standard`. The Vite plugin reuses that standard asset set instead of packing a second font copy into the renderer. Only WOFF2 shards needed by the current page text are loaded. The first page waits for the font before rendering, and later pages are redrawn when they introduce new glyphs. Set the option to `false` to disable this behavior, or point `cjkFontFallbackPath` at a self-hosted directory with the same structure.
 
@@ -55,3 +60,22 @@ PDF rendering has moved out of `@file-viewer/core` into this package, and `pdfjs
 The published renderer stages its Apache-2.0 PDF.js runtime under `dist/vendor/pdfjs` and isolates PDF.js' internal webpack bootstrap before packing. `provenance.json` records source hashes after the declared patches, transform counts, and staged output hashes, so webpack 4 consumers do not need a loader for renderer-internal paths.
 
 The staged runtime also includes a PDF.js 5.4.624 document-startup cancellation patch. It prevents unhandled promise rejections when switching files during main-thread fallback initialization; active parsing and password errors remain visible. The patch is included under `dist/vendor/pdfjs/patches/` with its hash in `provenance.json`. `pnpm verify:worker-lifecycle` tests cancellation, subsequent rendering, and invalid-file errors in both real and main-thread Workers on Chromium and WebKit.
+
+## Mouse panning
+
+`options.pdf.handTool: true` enables mouse drag-to-pan in the PDF viewport. It is
+`false` by default, preserving text selection. Touch scrolling/pinch, links, form
+fields, scrollbars, and modified clicks retain their native behavior.
+
+```ts
+const options = { pdf: { handTool: true } }
+```
+
+## Page orientation and print output
+
+A page's stored PDF rotation is combined with the viewer's rotation offset in
+fit calculations, sidebar/first-page thumbnails, exported images, and printing.
+The view-state `rotation` field remains the viewer offset, not the stored page
+rotation. Mixed page sizes and orientations use individual CSS page rules for
+printing; no source PDF bytes are modified. Printer-dialog overrides may still
+force a uniform paper size.

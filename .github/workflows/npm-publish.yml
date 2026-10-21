@@ -63,6 +63,9 @@ jobs:
       - name: Verify publisher failure and resume behavior
         run: node --test .github/scripts/npm-release-batch.test.mjs .github/scripts/publish-release-assets.test.mjs .github/scripts/npm-publish-workflow.test.mjs
 
+      - name: Verify the complete maintained source inventory
+        run: node .github/scripts/verify-source-layout.mjs
+
       - name: Download the immutable Release assets
         env:
           FILE_VIEWER_RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}

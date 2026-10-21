@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -10,7 +10,7 @@ import { test } from 'node:test'
 const packageDir = fileURLToPath(new URL('..', import.meta.url))
 const require = createRequire(new URL('../package.json', import.meta.url))
 
-test('the opt-in package owns pdf-lib without changing the base renderer dependency boundary', async () => {
+test('the opt-in repair is self-contained without changing the base renderer dependency boundary', async () => {
   const root = await mkdtemp(join(tmpdir(), 'fv-pdf-capability-owner-'))
   try {
     const renderer = join(root, 'node_modules/@file-viewer/renderer-pdf')
@@ -31,11 +31,6 @@ test('the opt-in package owns pdf-lib without changing the base renderer depende
       '{"name":"@file-viewer/capability-pdf-identity-repair","type":"module","exports":"./index.js"}'
     )
     await cp(join(packageDir, 'dist/index.js'), join(capability, 'index.js'))
-    await symlink(
-      dirname(require.resolve('pdf-lib/package.json')),
-      join(capability, 'node_modules/pdf-lib'),
-      process.platform === 'win32' ? 'junction' : 'dir'
-    )
     const { PDFDocument } = require('pdf-lib')
     const pdf = await PDFDocument.create()
     pdf.addPage().drawText('PDF capability import boundary')
@@ -51,6 +46,8 @@ test('the opt-in package owns pdf-lib without changing the base renderer depende
       import { createRequire } from 'node:module';
       const base = createRequire(process.cwd() + '/node_modules/@file-viewer/renderer-pdf/package.json');
       assert.throws(() => base.resolve('pdf-lib'), { code: 'MODULE_NOT_FOUND' });
+      const capability = createRequire(process.cwd() + '/node_modules/@file-viewer/capability-pdf-identity-repair/package.json');
+      assert.throws(() => capability.resolve('pdf-lib'), { code: 'MODULE_NOT_FOUND' });
       const { repairMalformedIdentityCjkFonts } = await import('@file-viewer/capability-pdf-identity-repair');
       const { getFileViewerPdfIdentityFontRepair } = await import('@file-viewer/renderer-pdf');
       assert.equal(getFileViewerPdfIdentityFontRepair(), repairMalformedIdentityCjkFonts);
@@ -66,4 +63,17 @@ test('the opt-in package owns pdf-lib without changing the base renderer depende
   } finally {
     await rm(root, { recursive: true, force: true })
   }
+})
+
+test('the bundled repair retains all original upstream grants and a private input inventory', async () => {
+  const notices = await readFile(
+    join(packageDir, 'dist/pdf-identity-repair.THIRD_PARTY_LICENSES.txt'),
+    'utf8'
+  )
+  assert.match(notices, /pdf-lib@1\.17\.1/)
+  assert.match(notices, /Copyright \(c\) 2019 Andrew Dillon/)
+  const inventory = JSON.parse(
+    await readFile(join(packageDir, '.build/pdf-identity-repair-inputs.json'), 'utf8')
+  )
+  assert(inventory.packages.some((item) => item.name === 'pdf-lib' && item.version === '1.17.1'))
 })

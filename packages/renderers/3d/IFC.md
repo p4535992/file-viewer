@@ -5,6 +5,13 @@ orbit/pan/zoom, fit-to-model, element selection, basic properties and an advance
 That Open hook. It does not change the ordinary 3D entry or the frozen Full/Office
 presets. Applications opt in instead of paying the BIM dependency cost by default.
 
+The optional `/ifc` entry exposes the actual Components and Fragments classes
+in its hooks and selection data. Its TypeScript declarations therefore require
+the same supported peers as its runtime. The ordinary package entry does not
+import those declarations and remains usable without the IFC SDK. Install the
+peers below before importing `/ifc`, including a type-only import; optional peer
+metadata describes the base package, not an SDK-free version of the IFC API.
+
 ## Install and self-host
 
 ```sh
@@ -13,10 +20,12 @@ npm install -D esbuild@0.28.2
 npx file-viewer-ifc-assets public/file-viewer/vendor/ifc
 ```
 
-The asset command is local: it bundles the import Worker and copies the matching
+The asset command is local: it bundles the published, compiled import Worker and copies the matching
 Fragments worker and Web-IFC WASM from installed packages. No CDN or online
 conversion service is used. Ship its entire output, including licenses and manifest.
 For a nested deployment use the same custom path in the command and `assetBaseUrl`.
+Existing destination files owned by the host are preserved. The command rejects
+symlinks or incompatible file types at its output paths before replacing assets.
 Use HTTP(S), module Workers and a browser with WebGL 2. CSP needs `worker-src 'self'
 blob:`, WASM execution via `script-src 'wasm-unsafe-eval'`, and the usual local script,
 style and data/blob-image permissions of the host. Neither COOP/COEP nor a threaded
@@ -154,3 +163,7 @@ The input files are unmodified. Test screenshots are rendered derivatives.
 Fixture bytes are supplied separately; the browser script checks their SHA-256.
 Run `pnpm --filter @file-viewer/renderer-3d verify:ifc-browser /path/to/fixtures`
 with `ifc4.ifc` and `ifc43.ifc` in that directory after building the package.
+Run `pnpm --filter @file-viewer/renderer-3d verify:ifc-installed /path/to/fixtures`
+to pack the normal packages, install them outside the checkout, exercise the npm
+asset command and render both models from the installed entry. This also checks
+nested paths, preserved host files, rejected output links and copied license bytes.

@@ -31,6 +31,7 @@ import {
   DEFAULT_FILE_VIEWER_TYPST_COMPILER_WASM_URL,
   DEFAULT_FILE_VIEWER_TYPST_FONT_ASSETS_URL,
   DEFAULT_FILE_VIEWER_TYPST_RENDERER_WASM_URL,
+  getDefaultFileViewerAssetBaseUrl,
   resolveFileViewerRuntimeAssetBaseUrl,
 } from '@file-viewer/core/assets';
 import type { FileViewerOptions } from '@file-viewer/core';
@@ -60,6 +61,17 @@ export function normalizeFullAssetBaseUrl(baseUrl?: string | URL | null) {
  */
 export function resolveDefaultFullAssetBaseUrl(documentRef?: Document | null) {
   const activeDocument = documentRef ?? (typeof document === 'undefined' ? null : document);
+  // The core override is already a resource directory, not a deployment root.
+  const configuredBaseUrl = getDefaultFileViewerAssetBaseUrl();
+  if (configuredBaseUrl) {
+    try {
+      return activeDocument
+        ? new URL(configuredBaseUrl, activeDocument.baseURI || activeDocument.URL).href
+        : configuredBaseUrl;
+    } catch {
+      return configuredBaseUrl;
+    }
+  }
   if (!activeDocument) {
     return DEFAULT_FULL_ASSET_BASE_URL;
   }

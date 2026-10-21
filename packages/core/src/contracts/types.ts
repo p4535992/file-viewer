@@ -487,8 +487,7 @@ export type FileViewerMessageResolver = (
 ) => string | undefined
 
 export type FileViewerMessages =
-  | Partial<Record<FileViewerMessageKey, string>>
-  | FileViewerMessageResolver
+  Partial<Record<FileViewerMessageKey, string>> | FileViewerMessageResolver
 
 export interface FileViewerI18nOptions {
   locale?: FileViewerLocale
@@ -500,13 +499,7 @@ export type FileViewerFileRef = File | Blob | ArrayBuffer
 export type FileViewerToolbarPosition = 'auto' | 'top' | 'top-center' | 'bottom-right'
 
 export type FileViewerFitMode =
-  | 'auto'
-  | 'contain'
-  | 'cover'
-  | 'width'
-  | 'height'
-  | 'actual'
-  | 'scale-down'
+  'auto' | 'contain' | 'cover' | 'width' | 'height' | 'actual' | 'scale-down'
 
 export type FileViewerFitResize = 'until-interaction' | 'always' | 'initial'
 
@@ -519,45 +512,21 @@ export interface FileViewerFitOptions {
 }
 
 export type FileViewerLifecyclePhase =
-  | 'load-start'
-  | 'load-complete'
-  | 'unload-start'
-  | 'unload-complete'
+  'load-start' | 'load-complete' | 'unload-start' | 'unload-complete'
 
 export type FileViewerOperationType =
-  | 'download'
-  | 'print'
-  | 'export-html'
-  | 'zoom-in'
-  | 'zoom-out'
-  | 'zoom-reset'
+  'download' | 'print' | 'export-html' | 'zoom-in' | 'zoom-out' | 'zoom-reset'
 
 export type FileViewerToolbarItem =
-  | 'search'
-  | 'zoom'
-  | 'download'
-  | 'print'
-  | 'exportHtml'
-  | 'export-html'
-  | 'theme'
+  'search' | 'zoom' | 'download' | 'print' | 'exportHtml' | 'export-html' | 'theme'
 
 export type FileViewerResolvedToolbarItem =
-  | 'search'
-  | 'zoom'
-  | 'download'
-  | 'print'
-  | 'exportHtml'
-  | 'theme'
+  'search' | 'zoom' | 'download' | 'print' | 'exportHtml' | 'theme'
 
 export type FileViewerToolbarActionMap = Partial<Record<FileViewerOperationType, boolean>>
 
 export type FileViewerRenderStateKind =
-  | 'idle'
-  | 'loading'
-  | 'ready'
-  | 'empty'
-  | 'unsupported'
-  | 'error'
+  'idle' | 'loading' | 'ready' | 'empty' | 'unsupported' | 'error'
 
 export type FileViewerRendererCategory =
   | 'office'
@@ -627,8 +596,7 @@ export interface FileViewerArchiveEntryActionContext {
 }
 
 export type FileViewerArchiveEntryActionPolicy =
-  | boolean
-  | ((entry: FileViewerArchiveEntryActionContext) => boolean)
+  boolean | ((entry: FileViewerArchiveEntryActionContext) => boolean)
 
 export interface FileViewerArchiveEntryActionsOptions {
   /**
@@ -643,7 +611,17 @@ export interface FileViewerArchiveOptions {
   wasmUrl?: string
   workerTimeoutMs?: number
   cache?: boolean
+  /**
+   * Maximum input bytes, and maximum expanded TAR/GZIP bytes in the workerless
+   * fallback (including TAR headers and padding). Defaults to 320 MiB.
+   * Must be a non-negative safe integer; zero permits only empty data.
+   */
   maxArchiveSize?: number
+  /**
+   * Maximum selected entry preview bytes. Defaults to 64 MiB. Also bounds
+   * single-file GZIP expansion during fallback listing; TAR/TGZ members are
+   * checked when selected. Must be a non-negative safe integer.
+   */
   maxEntryPreviewSize?: number
   entryActions?: FileViewerArchiveEntryActionsOptions
   /**
@@ -663,34 +641,31 @@ export interface FileViewerArchiveOptions {
 
 export interface FileViewerChmOptions {
   /** Self-hosted module Worker that owns all untrusted CHM parsing and decompression. */
-  workerUrl?: string | URL;
+  workerUrl?: string | URL
   /** Self-hosted wasm-bindgen JavaScript module loaded by the CHM Worker. */
-  wasmModuleUrl?: string | URL;
+  wasmModuleUrl?: string | URL
   /** Self-hosted Rust WebAssembly binary loaded by the CHM Worker. */
-  wasmUrl?: string | URL;
+  wasmUrl?: string | URL
   /** Maximum time for an individual Worker request. Defaults to 60 seconds. */
-  workerTimeoutMs?: number;
+  workerTimeoutMs?: number
   /** Maximum accepted CHM input size. Defaults to 320 MiB. */
-  maxArchiveBytes?: number;
+  maxArchiveBytes?: number
   /** Maximum number of virtual files accepted from one CHM. Defaults to 50,000. */
-  maxEntries?: number;
+  maxEntries?: number
   /** Maximum uncompressed size of one virtual file. Defaults to 32 MiB. */
-  maxEntryBytes?: number;
+  maxEntryBytes?: number
   /** Maximum total unique decoded content exposed by the parser. Defaults to 512 MiB. */
-  maxTotalDecompressedBytes?: number;
+  maxTotalDecompressedBytes?: number
   /** Maximum HTML topic size. Defaults to 16 MiB. */
-  maxHtmlBytes?: number;
+  maxHtmlBytes?: number
   /** Maximum topic count scanned by the built-in search. Defaults to 10,000. */
-  maxSearchTopics?: number;
+  maxSearchTopics?: number
   /** Maximum built-in search result count. Defaults to 200. */
-  maxSearchResults?: number;
+  maxSearchResults?: number
 }
 
 export type FileViewerArchivePasswordRequestReason =
-  | 'encrypted'
-  | 'invalid-password'
-  | 'read-failed'
-  | 'extract-failed'
+  'encrypted' | 'invalid-password' | 'read-failed' | 'extract-failed'
 
 export interface FileViewerArchivePasswordRequestContext {
   filename: string
@@ -701,6 +676,8 @@ export interface FileViewerArchivePasswordRequestContext {
 }
 
 export interface FileViewerPdfOptions {
+  /** Opt-in mouse hand-tool panning. Touch/pinch, links and form fields remain native. Default: false. */
+  handTool?: boolean
   toolbar?: boolean
   navigation?: boolean
   defaultNavigationVisible?: boolean
@@ -776,6 +753,11 @@ export interface FileViewerPdfBoundingBox {
 }
 
 export interface FileViewerDocxOptions {
+  /**
+   * 输出源部件与段落的只读定位标识，供独立展示适配器使用；默认关闭。
+   * 不提供编辑或文件写回能力，重新渲染后的展示状态由适配器维护。
+   */
+  exposeDisplayTargets?: boolean
   /** DOC/DOCX 默认保留插入和删除修订；final 显示定稿，original 显示修订前原稿。 */
   reviewMode?: 'all' | 'final' | 'original'
   worker?: boolean
@@ -795,6 +777,8 @@ export interface FileViewerDocxOptions {
   updatePageReferences?: boolean
   hideWebHiddenContent?: boolean
   ignoreLastRenderedPageBreak?: boolean
+  /** Set false to omit embedded HTML altChunks. Omitted/true retains the engine sandbox. */
+  renderAltChunks?: boolean
   /** External DOC/DOCX/RTF links are blocked by default; internal bookmark links remain active. */
   externalLinkPolicy?: 'allow' | 'block'
   /** Linked DOC/DOCX/RTF image resources are blocked by default; embedded images remain available. */
@@ -817,6 +801,8 @@ export interface FileViewerSpreadsheetOptions {
   resizableColumns?: boolean
   /** 允许用户在 Excel / CSV / ODS 预览中拖拽行头边界调整行高，默认关闭以保持历史行为。 */
   resizableRows?: boolean
+  /** 仅 Excel：用空白列标题、行号和单元格网格填满预览视口，默认 false；不扩展工作簿数据范围。 */
+  fillViewport?: boolean
 }
 
 export interface FileViewerPresentationOptions {
@@ -956,8 +942,8 @@ export interface FileRenderContext {
   filename?: string
   url?: string
   streamUrl?: string
-  /** Original browser File retained for renderers that support Blob-backed random access. */
-  sourceFile?: File
+  /** Original browser File or Blob retained for renderers with random access. */
+  sourceFile?: File | Blob
   signal?: AbortSignal
   options?: FileViewerOptions
   surface?: RenderSurface
@@ -1481,9 +1467,42 @@ export interface FileViewerTextOptions {
   htmlView?: 'preview' | 'source'
   /**
    * Source encoding. Defaults to `auto`: BOM and UTF-16 structure first,
-   * then strict UTF-8, with GB18030 (including GBK) as the final fallback.
+   * then strict UTF-8, then `fallbackEncoding`. Explicit single-byte labels
+   * decode legacy Latin, Cyrillic, and Central European files. Browsers
+   * decode the `iso-8859-1` label with the windows-1252 table, as the
+   * WHATWG Encoding Standard requires.
    */
-  encoding?: 'auto' | 'utf-8' | 'utf-16le' | 'utf-16be' | 'gbk' | 'gb18030'
+  encoding?:
+    | 'auto'
+    | 'utf-8'
+    | 'utf-16le'
+    | 'utf-16be'
+    | 'gbk'
+    | 'gb18030'
+    | 'iso-8859-1'
+    | 'iso-8859-2'
+    | 'iso-8859-15'
+    | 'windows-1250'
+    | 'windows-1251'
+    | 'windows-1252'
+  /**
+   * Encoding used by `auto` for bytes that are not valid UTF-8 and carry no
+   * BOM or UTF-16 structure. Defaults to `gb18030`, which preserves the
+   * historical behavior for GBK files. Set `windows-1252` for Western
+   * European sources or `windows-1251` for Cyrillic sources. Legacy byte
+   * sequences can also be valid UTF-8 or GB18030; use an explicit `encoding`
+   * when the source is known. Ignored when `encoding` is explicit.
+   */
+  fallbackEncoding?:
+    | 'utf-8'
+    | 'gbk'
+    | 'gb18030'
+    | 'iso-8859-1'
+    | 'iso-8859-2'
+    | 'iso-8859-15'
+    | 'windows-1250'
+    | 'windows-1251'
+    | 'windows-1252'
   /**
    * Shows the renderer-local source metadata toolbar (file type, indexing
    * status, and line count). Defaults to true. This does not control the
@@ -1519,6 +1538,8 @@ export interface FileViewerTextOptions {
    * an application prefers bounded source inspection for exceptionally large files.
    */
   markdownVirtualizeAboveBytes?: number
+  /** Highlights fenced Markdown code with a declared language. Defaults to true; bounded to 512 KiB of code per document. */
+  markdownHighlight?: boolean
   /** Maximum source bytes mounted for one very long logical line at a time. Defaults to 16 KiB. */
   maxRenderedLineBytes?: number
   /** Extra logical lines mounted above and below the visible viewport. Defaults to 12. */
@@ -1554,6 +1575,11 @@ export interface FileViewerDiagnostic {
 
 export interface FileViewerOptions {
   theme?: FileViewerThemeMode
+  /** Ctrl/Meta wheel and two-finger document zoom. Enabled when a zoom provider
+   * is available; ordinary scrolling and interactive controls stay native.
+   * Use false or disable individual gestures for a host that owns them.
+   */
+  zoomGestures?: boolean | { wheel?: boolean; pinch?: boolean }
   /**
    * Controls how aggressively the viewer protects its DOM and CSS from the
    * host page. Standard component packages resolve `auto` to Shadow DOM so
@@ -1791,7 +1817,25 @@ export interface FileViewerNavigationState {
   mode?: string
 }
 
+/** Zero-based workbook sheet id and inclusive cell bounds. */
+export interface FileViewerSpreadsheetRange {
+  sheetId: number;
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+export type FileViewerSpreadsheetNavigationStatus =
+  'idle' | 'pending' | 'applied' | 'rejected' | 'cancelled' | 'failed' | 'disposed';
+
 export interface FileViewerViewState {
+  /** Coordinate navigation for spreadsheets; does not edit or select cell contents. */
+  spreadsheet?: {
+    /** Active workbook sheet id, retained for restoring views without a range. */
+    sheetId?: number;
+    range?: FileViewerSpreadsheetRange;
+    status?: FileViewerSpreadsheetNavigationStatus;
+  };
   renderer?: string
   page?: number
   pageCount?: number
@@ -2071,11 +2115,35 @@ export interface RendererCapability {
 export type FileViewerFormatSupportLevel = 'high-fidelity' | 'structured' | 'basic' | 'experimental'
 export type FileViewerFormatStatus = 'stable' | 'experimental'
 
+export interface RendererSourceTypeProbeInput {
+  filename: string
+  extension: string
+  url?: string
+  file?: File | Blob
+  buffer?: ArrayBuffer
+  mimeType?: string
+  signal?: AbortSignal
+}
+
+export type RendererSourceTypeProbe = (
+  input: RendererSourceTypeProbeInput
+) => string | false | null | undefined | Promise<string | false | null | undefined>
+
 export interface RendererDefinition {
   id: string
   label: string
   category: FileViewerRendererCategory
   extensions: readonly string[]
+  /** Optional compound filename claims such as tileset.json or *.copc.laz. */
+  filenamePatterns?: readonly string[]
+  /** Prefer passing the original URL to the renderer instead of eagerly downloading it. */
+  sourceAccess?: 'buffer' | 'stream-preferred'
+  /**
+   * Optional bounded content probe. Return the specialist type to route the
+   * source through this renderer, or false when the existing extension owner
+   * must remain unchanged.
+   */
+  resolveSourceType?: RendererSourceTypeProbe
   async?: boolean
   /** Product-level fidelity contract generated from ecosystem/format-catalog.json. */
   supportLevel?: FileViewerFormatSupportLevel
@@ -2133,13 +2201,7 @@ export interface RendererRegistry {
 }
 
 export type FileViewerRendererPluginAssetKind =
-  | 'worker'
-  | 'wasm'
-  | 'script'
-  | 'style'
-  | 'font'
-  | 'vendor'
-  | 'data'
+  'worker' | 'wasm' | 'script' | 'style' | 'font' | 'vendor' | 'data'
 
 export interface FileViewerRendererPluginAssetEntry {
   id: string

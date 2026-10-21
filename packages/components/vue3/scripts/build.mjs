@@ -1,6 +1,8 @@
 import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import ts from 'typescript'
+import { normalizeRuntimeOnlyDeclarations } from '../../../build-support/runtime-only-typescript.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const distDir = resolve(packageDir, 'dist')
@@ -131,6 +133,11 @@ if (!args.has('--verify-only')) {
   await inlineCssAssetUrls()
   await fixInlineWorkerBlobs()
   await writeCompatibilityCss()
+  if (process.env.FILE_VIEWER_DISTRIBUTION_MODE === 'runtime-only') {
+    const result = await normalizeRuntimeOnlyDeclarations({ ts, directory: distDir,
+      legalDocumentPaths: [resolve(packageDir, 'LICENSE')] })
+    console.log(`[file-viewer-vue3] Normalized ${result.declarationFileCount} generated declarations for NodeNext`)
+  }
 }
 
 await verifyPackageOutput()

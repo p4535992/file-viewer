@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-design",
-  "version": "3.1.2",
+  "version": "3.2.2",
   "private": false,
   "type": "module",
   "description": "Offline-first Adobe design renderer for Photoshop, native PGF and PDF-compatible Illustrator, InDesign, XD, modern XFL-based Animate FLA, and bounded design-resource previews.",
@@ -74,8 +74,13 @@
     "./worker/postscript.worker.js": "./dist/postscript.worker.js",
     "./wasm/postscript.wasm": "./runtime/postscript/stet_wasm_bg.wasm",
     "./licenses/MPL-2.0.txt": "./LICENSES/MPL-2.0.txt",
+    "./licenses/Introspect_NATIVE_THIRD_PARTY_LICENSES.json": "./LICENSES/Introspect_NATIVE_THIRD_PARTY_LICENSES.json",
     "./licenses/Stet-Apache-2.0.txt": "./LICENSES/Stet-Apache-2.0.txt",
     "./licenses/Stet-MIT.txt": "./LICENSES/Stet-MIT.txt",
+    "./licenses/Stet-URW-Fonts-OFL-1.1.txt": "./LICENSES/Stet-URW-Fonts-OFL-1.1.txt",
+    "./licenses/Stet-CMYK-Profile.txt": "./LICENSES/Stet-CMYK-Profile.txt",
+    "./licenses/CC0-1.0.txt": "./LICENSES/CC0-1.0.txt",
+    "./licenses/Stet_NATIVE_THIRD_PARTY_LICENSES.json": "./LICENSES/Stet_NATIVE_THIRD_PARTY_LICENSES.json",
     "./licenses/Carlito-OFL-1.1.txt": "./LICENSES/Carlito-OFL-1.1.txt",
     "./licenses/Tinos-OFL-1.1.txt": "./LICENSES/Tinos-OFL-1.1.txt",
     "./licenses/Cousine-OFL-1.1.txt": "./LICENSES/Cousine-OFL-1.1.txt",
@@ -105,15 +110,16 @@
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json --force && node scripts/build-worker.mjs",
-    "type-check": "tsc -b tsconfig.json"
+    "type-check": "tsc -b tsconfig.json",
+    "verify:postscript-built": "node scripts/verify-postscript-wasm.mjs"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.1.2",
-    "@file-viewer/renderer-data": "workspace:3.1.2",
-    "@paged-media/introspect-wasm": "0.63.0",
+    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/renderer-data": "workspace:3.2.2",
+    "@paged-media/introspect-wasm": "0.70.2",
     "@webtoon/psd": "0.4.0",
     "@xmldom/xmldom": "0.9.12",
-    "ag-psd": "31.0.2",
+    "ag-psd": "31.0.3",
     "fzstd": "0.1.1",
     "illustrator-pgf": "0.1.0",
     "saxes": "6.0.0"

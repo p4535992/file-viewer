@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { captureCommand } from './npm-release-batch.mjs'
+import { readmeContract } from '../../packages/build-support/package-readmes.mjs'
 
 const publisher = join(dirname(fileURLToPath(import.meta.url)), 'publish-release-assets.mjs')
 const repository = 'https://github.com/flyfish-dev/file-viewer'
@@ -17,6 +18,18 @@ async function fixture(t, scenario = '') {
   const assets = join(root, 'assets')
   await mkdir(bin)
   await mkdir(assets)
+  const checkout = join(root, 'checkout')
+  const scriptDirectory = join(checkout, '.github/scripts')
+  await mkdir(scriptDirectory, { recursive: true })
+  for (const name of ['publish-release-assets.mjs', 'npm-release-batch.mjs']) {
+    await cp(join(dirname(publisher), name), join(scriptDirectory, name))
+  }
+  await mkdir(join(checkout, 'packages/build-support'), { recursive: true })
+  await cp(
+    new URL('../../packages/build-support/package-readmes.mjs', import.meta.url),
+    join(checkout, 'packages/build-support/package-readmes.mjs')
+  )
+  const isolatedPublisher = join(scriptDirectory, 'publish-release-assets.mjs')
   const entries = []
   const existing = {}
   for (const [name, dependencies] of [
@@ -34,6 +47,31 @@ async function fixture(t, scenario = '') {
       repository: { type: 'git', url: repository }
     }
     await writeFile(join(directory, 'package/package.json'), JSON.stringify(pkg))
+    const packageDir = `packages/${name}`
+    const source = join(checkout, packageDir)
+    await mkdir(source, { recursive: true })
+    await writeFile(join(source, 'package.json'), JSON.stringify(pkg))
+    const sourceReadmes = Object.fromEntries(
+      ['README.md', 'README.en.md'].map((path) => [
+        path,
+        Buffer.from(
+          `# ${name}\n\nMaintained ${path} documentation.\n\n## Install\n\nnpm install ${name}\n\n## Usage\n\nUse the documented ${name} API. 中文示例。\n`
+        )
+      ])
+    )
+    for (const [path, bytes] of Object.entries(sourceReadmes)) {
+      await writeFile(join(source, path), bytes)
+      if (name === 'full' && scenario === 'missing-readme' && path === 'README.md') continue
+      const packed =
+        name === 'full' && path === 'README.md' && scenario === 'placeholder-readme'
+          ? Buffer.from(
+              `# ${name}\n\nRuntime package version ${version}.\n\nUsage and API documentation: https://example.test/\n`
+            )
+          : name === 'full' && path === 'README.md' && scenario === 'changed-readme'
+            ? Buffer.from(bytes.toString().replace('documented', 'outdated'))
+            : bytes
+      await writeFile(join(directory, 'package', path), packed)
+    }
     const tarball = `${name}-${version}.tgz`
     assert.equal(
       (await captureCommand('tar', ['-czf', join(assets, tarball), '-C', directory, 'package']))
@@ -50,6 +88,8 @@ async function fixture(t, scenario = '') {
     entries.push({
       packageName: name,
       version,
+      packageDir,
+      readmes: readmeContract(sourceReadmes),
       tarball,
       sha256: createHash('sha256').update(bytes).digest('hex')
     })
@@ -87,7 +127,7 @@ if (process.env.MOCK_SCENARIO === 'conflict') { console.error('npm error EPUBLIS
   await writeFile(join(bin, 'npm'), mock)
   await chmod(join(bin, 'npm'), 0o755)
   const run = (extra = {}) =>
-    captureCommand(process.execPath, [publisher], {
+    captureCommand(process.execPath, [isolatedPublisher], {
       env: {
         ...process.env,
         PATH: `${bin}:${process.env.PATH}`,
@@ -177,5 +217,26 @@ test('dry run never waits for simulated uploads to become published', async (t) 
 test('real publishing outside Actions is rejected before any write', async (t) => {
   const f = await fixture(t)
   assert.match((await f.run({ GITHUB_ACTIONS: 'false' })).stderr, /restricted to GitHub Actions/)
+  assert.deepEqual(await f.calls(), [])
+})
+
+for (const scenario of ['missing-readme', 'placeholder-readme', 'changed-readme']) {
+  test(`publisher blocks every npm write when a tarball has ${scenario}`, async (t) => {
+    const f = await fixture(t, scenario)
+    const result = await f.run()
+    assert.notEqual(result.status, 0)
+    assert.deepEqual(await f.calls(), [])
+  })
+}
+
+test('publisher refuses matching archive receipts when the maintained source changed', async (t) => {
+  const f = await fixture(t)
+  await writeFile(
+    join(f.root, 'checkout/packages/full/README.md'),
+    '# full\n\nChanged maintained source documentation.\n'
+  )
+  const result = await f.run()
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /differs from maintained source/)
   assert.deepEqual(await f.calls(), [])
 })

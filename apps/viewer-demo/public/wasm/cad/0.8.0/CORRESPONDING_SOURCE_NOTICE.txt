@@ -1,0 +1,33 @@
+CAD runtime corresponding source
+
+The current (0.8.3), unversioned and compatibility (0.8.0, 0.8.1) paths contain the same installed CAD 0.8.3 runtime.
+The compatibility paths are aliases for existing deployments; they do not distribute older binaries.
+JavaScript source-map reference comments are omitted and the normal public offline sanitizer localizes fallback markers. WebAssembly bytes are unchanged.
+The unchanged normalization script is available in the public File Viewer source:
+https://github.com/flyfish-dev/file-viewer/blob/c4cbee1b42ef1a7357e08c222da7451bf0ef2c31/packages/components/web-full/scripts/offline-asset-sanitize.mjs
+
+@flyfish-dev/cad-viewer 0.8.3 (AGPL-3.0-only), including its Worker and asset build scripts:
+https://codeload.github.com/flyfish-dev/cad-viewer/tar.gz/6366d2f7b1013cd5c300008c3c3fbf017ca9aace
+SHA-256: 65d00f07230553734262d671abf45be94d83d3068318c0f25f8665494ec82bcb
+
+dwf-viewer 0.6.7 (AGPL-3.0-only), including C source and scripts/build-wasm.sh:
+https://codeload.github.com/flyfish-dev/dwf-viewer/tar.gz/72783571e2cd744862d8eb32f7d3455906c76226
+SHA-256: d246d61b914475412fdc33ea250646710c4a3431bfecad9c9a7700602923afb1
+
+@mlightcad/libredwg-web 0.7.9 (GPL-3.0-only), including JavaScript bindings and their build scripts:
+https://codeload.github.com/mlightcad/libredwg-web/tar.gz/b70b5573a6bf2345e5fb10f2adff7fb74a8123c5
+SHA-256: af350d628535a2842262af5b49d50568b6dae62854667e13bb9f161b26c00431
+
+Redistributors must retain LICENSE (AGPL-3.0), GPL-3.0.txt, NOTICE and this source notice.
+The asset sources above cover the native owner runtimes. The File Viewer integration source offer follows.
+
+File Viewer CAD integration corresponding source
+
+Package release: 3.2.2
+Source archive: https://github.com/flyfish-dev/file-viewer/releases/download/v3.2.0-sources/file-viewer-cad-corresponding-source-3.2.0.tar.gz
+SHA-256: ca91f24f8adf161bc41a787d111afca493f15f2ee15511dc25e5153a7a607b57
+
+This archive reconstructs the CAD JavaScript integration from the original public preferred source, version-specific asset-license descriptors, fixed dependencies and ordinary build scripts.
+It retains complete original license texts and identifies the exact public CAD, DWF and LibreDWG bindings sources in upstream-sources.json.
+The integration output is 622,502 bytes with SHA-256 9d548ef213c59c2ffe81070c7410b1825093817f684ee5353486f409e913f3f5.
+The original component grants, attribution and native source notices remain applicable.

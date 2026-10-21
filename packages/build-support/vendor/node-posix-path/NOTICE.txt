@@ -1,0 +1,6 @@
+Node.js v7.0.0 POSIX path implementation (MIT).
+Original source: https://raw.githubusercontent.com/nodejs/node/v7.0.0/lib/path.js
+Original source SHA-256: c1c71083021675d1af30fa23861d383c3a3f84578ce6f6b16bc34d0a49d0d6b0
+Original license: https://raw.githubusercontent.com/nodejs/node/v7.0.0/LICENSE
+Original license SHA-256: 1914bfb950be8d576ce9e49c8a0e51c9f2402560fe3c19093e69bc1306a56e9e
+The distributed browser adaptation extracts the POSIX implementation, uses a fixed root cwd, replaces the Node-only diagnostic helper and exports ESM. It does not contain code from path-webpack.

@@ -12,6 +12,15 @@ import {
 } from '../packages/core/src'
 
 describe('@file-viewer/core option serialization helpers', () => {
+  it('preserves the opt-in Excel viewport option through public JSON and URL parameters', () => {
+    const options = { spreadsheet: { fillViewport: true, worker: false as const } }
+    expect(parseFileViewerOptions(serializeFileViewerOptions(options)!)).toEqual(options)
+    const params = new URLSearchParams()
+    setFileViewerOptionsSearchParam(params, options)
+    expect(getFileViewerOptionsSearchParam(params)).toEqual(options)
+    expect(parseFileViewerOptions(serializeFileViewerOptions({ spreadsheet: { fillViewport: false } })!))
+      .toEqual({ spreadsheet: { fillViewport: false } })
+  })
   it('preserves declarative XML profiles but never serializes diagnostic callbacks', () => {
     const xml = {
       profiles: [{

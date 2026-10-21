@@ -78,6 +78,8 @@ try {
 
   await mkdir(outputRoot, { recursive: true })
   const outputModule = join(outputRoot, 'mp4v-decoder.mjs')
+  const linkMap = process.env.FILE_VIEWER_MP4V_LINK_MAP && resolve(process.env.FILE_VIEWER_MP4V_LINK_MAP)
+  if (linkMap) await mkdir(dirname(linkMap), { recursive: true })
   const compile = spawnSync('em++', [
     '-O3',
     '-flto',
@@ -95,6 +97,7 @@ try {
     '-sINITIAL_MEMORY=33554432',
     '-sEXPORTED_FUNCTIONS=["_malloc","_free","_mp4v_create","_mp4v_decode","_mp4v_reset","_mp4v_output","_mp4v_width","_mp4v_height","_mp4v_buffer_width","_mp4v_buffer_height","_mp4v_destroy"]',
     '-sEXPORTED_RUNTIME_METHODS=["HEAPU8"]',
+    ...(linkMap ? [`-Wl,-Map,${linkMap}`] : []),
     '-o',
     outputModule
   ], { encoding: 'utf8' })

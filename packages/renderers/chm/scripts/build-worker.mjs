@@ -2,11 +2,14 @@ import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
+import { verifyNativeNoticeBook } from '../../../build-support/verify-native-notice-book.mjs'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const wasmSourceDir = resolve(packageDir, 'src/wasm')
 const outputDir = resolve(packageDir, 'dist')
 const workerOutput = resolve(outputDir, 'chm.worker.js')
+await verifyNativeNoticeBook({ packageRoot: packageDir, bookPath: 'rust/THIRD_PARTY_LICENSES.md',
+  lockPath: 'rust/Cargo.lock', runtimePath: 'src/wasm/chm_wasm_bg.wasm', markdown: true })
 
 await mkdir(outputDir, { recursive: true })
 await build({

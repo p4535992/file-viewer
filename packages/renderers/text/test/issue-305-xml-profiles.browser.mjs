@@ -80,7 +80,7 @@ const server = createServer(async (req, res) => {
     if (runtimeFiles[url.pathname]) return send(url.pathname.endsWith('.wasm') ? 'application/wasm' : 'text/javascript', await readFile(runtimeFiles[url.pathname]))
     if (url.pathname.startsWith('/profiles/') && fixtures.has(path.basename(url.pathname))) return send(url.pathname.endsWith('.json') ? 'application/json' : 'application/xml', fixtures.get(path.basename(url.pathname)))
     res.statusCode = 404; res.end('not found')
-  } catch (error) { res.statusCode = 500; res.end(String(error)) }
+  } catch (error) { console.error(error); res.statusCode = 500; res.end('Fixture request failed') }
 })
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
 const origin = `http://127.0.0.1:${server.address().port}`
