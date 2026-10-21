@@ -1,6 +1,6 @@
 name: Build full-with-opts-in release
 
-run-name: full-with-opts-in from ${{ github.ref_name }} (${{ github.run_number }})
+run-name: full-with-opts-in v3.2.2 from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
   # Trigger only when this branch-specific release workflow changes.
