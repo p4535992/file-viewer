@@ -11,11 +11,13 @@ import './styles.css'
 const host = document.getElementById('vue3-viewer')
 const params = new URLSearchParams(window.location.search)
 const toolbarSmoke = params.get('smoke')
-const defaultUrl = toolbarSmoke === 'toolbar-slots'
-  ? '/example/markdown.md'
-  : toolbarSmoke === 'search-boundary'
-    ? '/example/pic.png'
-    : '/example/word.docx'
+const zoomSmoke = toolbarSmoke?.startsWith('zoom-') ?? false
+const defaultUrl =
+  toolbarSmoke === 'toolbar-slots'
+    ? '/example/markdown.md'
+    : toolbarSmoke === 'search-boundary'
+      ? '/example/pic.png'
+      : '/example/word.docx'
 const demoSource = getDemoSource(defaultUrl)
 
 if (!host) {
@@ -33,40 +35,67 @@ const searchOnlyToolbar = {
 
 const options: ViewerOptions = {
   theme: 'light',
-  toolbar: toolbarSmoke ? searchOnlyToolbar : { position: 'bottom-right' }
+  toolbar: zoomSmoke
+    ? {
+        ...searchOnlyToolbar,
+        zoom: true,
+        items: toolbarSmoke === 'zoom-reset-hidden' ? { 'zoom-reset': false } : undefined,
+        permissions: toolbarSmoke === 'zoom-in-denied' ? { 'zoom-in': false } : undefined
+      }
+    : toolbarSmoke
+      ? searchOnlyToolbar
+      : { position: 'bottom-right' },
+  pdf: toolbarSmoke === 'zoom-pdf-hidden' ? { zoomToolbar: false } : undefined
 }
 
-const toolbarSlots = toolbarSmoke === 'toolbar-slots'
-  ? {
-      'toolbar-start': (slotProps: FileViewerToolbarSlotProps) => h('button', {
-        type: 'button',
-        'data-testid': 'vue3-toolbar-start',
-        'data-api-search': String(typeof slotProps.api.searchDocument === 'function'),
-        'data-download-available': String(slotProps.availability.download),
-        'data-zoom-scale': String(slotProps.zoomState.scale),
-        'data-search-total': String(slotProps.searchState.total),
-        onClick: () => slotProps.api.searchDocument('Markdown')
-      }, 'Search from start slot'),
-      'toolbar-end': (slotProps: FileViewerToolbarSlotProps) => h('button', {
-        type: 'button',
-        'data-testid': 'vue3-toolbar-end',
-        'data-api-search': String(typeof slotProps.api.searchDocument === 'function'),
-        'data-search-total': String(slotProps.searchState.total),
-        onClick: () => {
-          document.body.dataset.vue3ToolbarEndClicked = 'true'
-        }
-      }, 'End slot')
-    }
-  : undefined
+const toolbarSlots =
+  toolbarSmoke === 'toolbar-slots'
+    ? {
+        'toolbar-start': (slotProps: FileViewerToolbarSlotProps) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              'data-testid': 'vue3-toolbar-start',
+              'data-api-search': String(typeof slotProps.api.searchDocument === 'function'),
+              'data-download-available': String(slotProps.availability.download),
+              'data-zoom-scale': String(slotProps.zoomState.scale),
+              'data-search-total': String(slotProps.searchState.total),
+              onClick: () => slotProps.api.searchDocument('Markdown')
+            },
+            'Search from start slot'
+          ),
+        'toolbar-end': (slotProps: FileViewerToolbarSlotProps) =>
+          h(
+            'button',
+            {
+              type: 'button',
+              'data-testid': 'vue3-toolbar-end',
+              'data-api-search': String(typeof slotProps.api.searchDocument === 'function'),
+              'data-search-total': String(slotProps.searchState.total),
+              onClick: () => {
+                document.body.dataset.vue3ToolbarEndClicked = 'true'
+              }
+            },
+            'End slot'
+          )
+      }
+    : undefined
 
 createApp({
   render() {
-    return h(FileViewer, {
-      url: demoSource.url,
-      filename: demoSource.filename,
-      options
-    }, toolbarSlots)
+    return h(
+      FileViewer,
+      {
+        url: demoSource.url,
+        filename: demoSource.filename,
+        options
+      },
+      toolbarSlots
+    )
   }
-}).use(FileViewerPlugin).mount(host)
+})
+  .use(FileViewerPlugin)
+  .mount(host)
 
 document.body.setAttribute('data-component', 'vue3')

@@ -1,5 +1,7 @@
 # @file-viewer/renderer-pdf
 
+[English](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/pdf/README.md) · [简体中文](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/pdf/README.zh-CN.md)
+
 Cold-network loading starts the real Worker directly, without a duplicate version-probe request.
 PDF.js checks API compatibility before parsing. Mismatched workers are destroyed and retried
 with the bundled matching handler without losing transferred input. Main-thread fallbacks
@@ -27,6 +29,18 @@ const options = {
   renderers: [pdfRenderer],
 }
 ```
+
+## PDF URL loading
+
+The standard PDF renderer accepts URL sources across Vanilla/Web Component, React, Svelte, jQuery and Vue. `pdf.streaming` defaults to `'same-origin'`; use `true` for a CORS-enabled cross-origin or signed URL and supply `filename: 'document.pdf'` or `type: 'pdf'` when the URL has no extension. The renderer gives that URL directly to PDF.js without a complete core prefetch. Range requests require server support and, across origins, exposed `Accept-Ranges`, `Content-Length` and `Content-Range` response headers.
+
+`pdf.streaming: false` downloads the file once before rendering. Explicit buffers/files and a caller-supplied `fetchFile` hook keep their byte-acquisition precedence; an original URL remains metadata and does not trigger another PDF.js download. Custom buffer-only renderers also keep their declared contract. PDF.js streaming may continue fetching in the background. To load only demanded ranges, set both `pdf.disableStream: true` and `pdf.disableAutoFetch: true`; disabling auto-fetch requires disabling streaming, and both options retain PDF.js defaults when omitted.
+
+## Reading theme
+
+Live updates without reloading apply to the renderer's observed theme attributes, system color scheme and the Vanilla core theme update path. Framework component and toolbar/controller option updates may reinitialize the preview.
+
+PDF pages follow `options.theme` (`light`, `dark`, or `system`), including live theme changes. Dark reading uses a preview-only canvas color filter; it also changes image colors. Set `pdf.darkMode: false` to keep the document's original colors, or `true` to force dark reading independently of the toolbar. Original downloads, printed pages, and exported canvas bytes retain their source colors.
 
 ## Offline Assets
 

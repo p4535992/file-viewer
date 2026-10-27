@@ -1,8 +1,4 @@
 ---
-
-> **Maintainer-only commands:** this page contains complete-workspace release or verification examples that are not part of the public checkout. Public contributors should use the commands in `/README.md` or `/docs/guide/development.md`.
-
-<!-- FILE_VIEWER_MAINTAINER_COMMANDS -->
 description: "Troubleshoot File Viewer packages, runtime assets, Worker and WASM paths, supported formats, licensing, mobile layout, and deployment behavior."
 ---
 
@@ -32,9 +28,9 @@ If a Worker or WASM still fails, inspect its URL: the response must be the real 
 
 ## How can I verify the DOCX 0.3.31 fixes are active?
 
-The current Word renderer uses `@file-viewer/docx@0.3.36` in both the main thread and the offline Worker. It includes the Japanese text, VML text box, Apache POI `w:hMerge`, multi-section floating-shape, complex frame, section, positioned-page, revision, paragraph-mark, and soft-break fixes, and blocks external document resources by default.
+The current Word renderer uses `@file-viewer/docx@0.3.39` in both the main thread and the offline Worker. It includes the Japanese text, VML text box, Apache POI `w:hMerge`, multi-section floating-shape, complex frame, section, positioned-page, revision, paragraph-mark, and soft-break fixes, and blocks external document resources by default.
 
-After upgrading, redeploy the matching viewer assets and confirm the browser requests `vendor/docx/docx.worker.js?file-viewer-docx=0.3.36` (possibly below your `file-viewer/` base) as JavaScript. Do not reuse a Worker from an older package version. If the old layout remains, purge the CDN or service-worker cache and reload the document.
+After upgrading, redeploy the matching viewer assets and confirm the browser requests `vendor/docx/docx.worker.js?file-viewer-docx=0.3.39` (possibly below your `file-viewer/` base) as JavaScript. Do not reuse a Worker from an older package version. If the old layout remains, purge the CDN or service-worker cache and reload the document.
 
 ## Why does a full package still say the libarchive Worker did not load?
 
@@ -76,11 +72,7 @@ pnpm install
 
 For offline tgz installs, the top-level tgz still needs all runtime dependencies to resolve from npm, a private registry, or sibling local tarballs. In intranet environments, publish the same-version `@file-viewer/vue3`, the selected preset, its renderer packages, and `@file-viewer/core` to a private registry, or declare the local tgz dependency closure together.
 
-Release verification includes:
-
-```bash
-pnpm verify:npm-install-smoke
-```
+After reinstalling, run your application's build to check its dependency graph. The repository's [cold-consumer workflow](https://github.com/flyfish-dev/file-viewer/blob/main/.github/workflows/public-ci.yml) tests the fixed release archives separately.
 
 ## Can I deploy without public CDNs?
 

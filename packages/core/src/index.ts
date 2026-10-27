@@ -749,6 +749,7 @@ export {
   resolveFileViewerLifecycleHookErrorMessage,
   resolveFileViewerBeforeOperationErrorMessage,
   resolveFileViewerOperationAvailability,
+  resolveFileViewerToolbarZoomButtons,
   resolveFileViewerToolbarOrder,
   resolveFileViewerToolbarState,
   resolveFileViewerToolbarPosition,
@@ -830,6 +831,7 @@ export {
 export {
   resolveFileViewerPresentationState,
 } from './presentation/state';
+export { observeFileViewerColorScheme } from './presentation/colorScheme';
 export type {
   FileViewerPresentationState,
   ResolveFileViewerPresentationStateInput,
@@ -1247,6 +1249,7 @@ export type {
   FileViewerPdfBoundingBoxOrigin,
   FileViewerPdfBoundingBoxUnit,
   FileViewerPdfOptions,
+  FileViewerEpubOptions,
   FileViewerPresentationOptions,
   FileViewerPrintOptions,
   FileViewerPrintMaskOptions,
@@ -1320,3 +1323,4 @@ export type {
 export { resolveFileViewerCopiedAssetUrl } from './platform/copiedAssets';
 
 export type { FileViewerSpreadsheetRange, FileViewerSpreadsheetNavigationStatus } from './contracts/types';
+export { installFileViewerImageHandTool } from './features/document/imageHandTool';

@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/core",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Framework-neutral modular TypeScript core for File Viewer renderer orchestration, lifecycle APIs, search, zoom, print, and export",
@@ -87,14 +87,15 @@
     "vendor",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "node scripts/clean-dist.mjs && tsc -b tsconfig.json --force && node scripts/fix-core-esm-extensions.mjs",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "dompurify": "3.4.16"
+    "dompurify": "3.4.17"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

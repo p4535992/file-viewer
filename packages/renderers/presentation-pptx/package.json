@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-pptx",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Standalone OpenXML PowerPoint renderer for PPTX, PPTM, POTX, POTM, PPSX, and PPSM files.",
@@ -50,15 +50,16 @@
     "file-viewer.capability.json",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
-    "@file-viewer/pptx": "workspace:3.2.2"
+    "@file-viewer/core": "workspace:3.3.0",
+    "@file-viewer/pptx": "workspace:3.3.0"
   },
   "devDependencies": {
     "typescript": "^6.0.3"

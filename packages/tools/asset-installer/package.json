@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/asset-installer",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Small transactional installer shared by independently shipped File Viewer capability asset packs.",
@@ -20,7 +20,8 @@
   "files": [
     "dist",
     "README.md",
-    "README.en.md"
+    "README.en.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node ../../build-support/ensure-node-bin.mjs packages/tools/asset-installer/dist/cli.js",

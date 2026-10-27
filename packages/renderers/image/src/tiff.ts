@@ -1,4 +1,5 @@
 import {
+  installFileViewerImageHandTool,
   createFileViewerTranslator,
   createFileViewerViewStateChange,
   createFileViewerViewStateChangeEmitter,
@@ -51,7 +52,7 @@ const tiffStyle = `
 .tiff-toolbar button:focus-visible{outline:3px solid #60a5fa;outline-offset:1px}
 .tiff-page-meter,.tiff-rotation-meter{min-width:38px;color:#64748b;font:700 12px/1 system-ui,sans-serif;text-align:center}
 .tiff-page-meter{min-width:52px;padding-right:6px;border-right:1px solid rgba(148,163,184,.35)}
-.tiff-stage{min-width:100%;display:flex;flex-direction:column;align-items:center;gap:${PAGE_GAP}px;padding:70px 24px 24px;box-sizing:border-box}
+.tiff-stage{width:max-content;min-width:100%;display:flex;flex-direction:column;align-items:center;gap:${PAGE_GAP}px;padding:70px 24px 24px;box-sizing:border-box}
 .tiff-frame{position:relative;flex:0 0 auto;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.16)}
 .tiff-frame img{position:absolute;top:50%;left:50%;display:block;width:auto;max-width:none;margin:0;border:0;background:#fff;cursor:zoom-in;transform:translate(-50%,-50%) rotate(var(--image-rotation,0deg));transform-origin:center center;transition:transform .18s ease}
 .tiff-frame img:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
@@ -296,6 +297,8 @@ export async function renderTiffWithDecoder(
   root.append(toolbar, stage);
   const lightbox = createLightbox(documentRef, t);
   target.replaceChildren(style, root);
+  const disposeHandTool = context?.options?.image?.handTool === true
+    ? installFileViewerImageHandTool(root, context.signal) : () => {};
   (context?.surface?.shadowRoot || target).append(lightbox.element);
 
   const pageExtents = () => pages.map(page => currentRotation % 180 === 0
@@ -493,6 +496,7 @@ export async function renderTiffWithDecoder(
   const cleanup = () => {
     if (destroyed) return;
     destroyed = true;
+    disposeHandTool();
     context?.registerThumbnailAdapter?.(null);
     unregisterFileViewerViewStateProvider(root);
     unregisterFileViewerZoomProvider(root);

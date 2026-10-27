@@ -9,7 +9,7 @@ import { createRequire } from 'node:module'
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 
-const version = '3.2.2'
+const version = '3.3.0'
 const repo = process.env.GITHUB_WORKSPACE || process.cwd()
 const out = process.env.OUT_DIR
 const temp = process.env.RUNNER_TEMP
@@ -223,9 +223,9 @@ for (const needed of ['@file-viewer/assets-standard', '@file-viewer/assets-typst
 }
 const ledger = { entries: assetPackDetails, paths: await walk(assetRoot) }
 const document = [
-  '# File Viewer v3.2.2 — full opt-in offline distribution',
+  '# File Viewer v3.3.0 — full opt-in offline distribution',
   '',
-  'Built against flyfish-dev/file-viewer v3.2.2 with additive opt-in wrappers.',
+  'Built against flyfish-dev/file-viewer v3.3.0 with additive opt-in wrappers.',
   'web/ includes precompiled ESM and all installed production dependencies,',
   'including the project renderer packages and third-party runtime modules.',
   'Use web/dist/index.js with your bundler without recompiling File Viewer.',

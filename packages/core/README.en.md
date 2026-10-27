@@ -1,5 +1,7 @@
 # @file-viewer/core
 
+[English](https://github.com/flyfish-dev/file-viewer/blob/main/packages/core/README.md) · [简体中文](https://github.com/flyfish-dev/file-viewer/blob/main/packages/core/README.zh-CN.md)
+
 <!-- FILE_VIEWER_PACKAGE_HEADER -->
 <p>
   <a href="https://www.npmjs.com/package/@file-viewer/core"><img src="https://img.shields.io/npm/v/@file-viewer%2Fcore?logo=npm" alt="npm version"></a>
@@ -9,7 +11,7 @@
 </p>
 
 <p>
-  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/">Docs</a> · <a href="https://demo.file-viewer.app/">Live demo</a> · <a href="https://doc.file-viewer.app/guide/formats">Format matrix</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">Issues</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/core/README.md">简体中文</a>
+  <a href="https://github.com/flyfish-dev/file-viewer">GitHub</a> · <a href="https://doc.file-viewer.app/">Docs</a> · <a href="https://demo.file-viewer.app/">Live demo</a> · <a href="https://doc.file-viewer.app/guide/formats">Format matrix</a> · <a href="https://github.com/flyfish-dev/file-viewer/issues">Issues</a> · <a href="https://github.com/flyfish-dev/file-viewer/blob/main/packages/core/README.zh-CN.md">简体中文</a>
 </p>
 
 <p>
@@ -82,6 +84,15 @@ const viewer = createViewer(document.querySelector('#viewer')!, {
 })
 
 await viewer.load({ url: '/files/report.pdf' })
+```
+
+Zoom buttons keep their positions and become disabled at their limits. Configure the existing `toolbar.items` map to hide reset controls while retaining the `resetZoom()` API. Set `pdf.zoomToolbar` to `false` to hide the PDF renderer's zoom group while keeping its page navigation and rotation controls:
+
+```ts
+const options = {
+  toolbar: { items: { 'zoom-reset': false } },
+  pdf: { zoomToolbar: false }
+}
 ```
 
 HTML document builders live in the opt-in export entry so ordinary previews do

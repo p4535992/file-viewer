@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-iwork",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Offline Apple Pages, Numbers and Keynote renderer for modern IWA and iWork '09 containers.",
@@ -59,14 +59,15 @@
     "README.md",
     "README.en.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json --force && node scripts/build-worker.mjs",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "@xmldom/xmldom": "^0.9.12",
     "jszip": "3.10.2",
     "keynote-archives": "2.0.1",

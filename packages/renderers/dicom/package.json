@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-dicom",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "sideEffects": false,
@@ -63,7 +63,8 @@
     "THIRD_PARTY_NOTICES.md",
     "THIRD_PARTY_LICENSES.json",
     "third-party/native-codecs",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json && node scripts/build-runtime.mjs",
@@ -72,7 +73,7 @@
     "verify:packed-browser": "pnpm --filter @file-viewer/core build && pnpm build && node scripts/verify-packed-browser.mjs"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "dicom-parser": "1.8.21",
     "events": "3.3.0",
     "pako": "2.2.0"

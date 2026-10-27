@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-spreadsheet",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Standalone spreadsheet renderer plugin for File Viewer powered by styled-exceljs and e-virt-table.",
@@ -69,19 +69,22 @@
     "README.md",
     "README.en.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json --force && node scripts/build-worker.mjs",
     "type-check": "tsc -b tsconfig.json",
     "verify:github-175": "pnpm build && node scripts/verify-github-175.mjs",
+    "verify:github-405": "pnpm build && node scripts/verify-github-405.mjs && node scripts/verify-github-405-browser.mjs",
+    "verify:github-414": "pnpm build && node scripts/verify-github-414-browser.mjs",
     "verify:github-178": "pnpm --filter @file-viewer/core build && pnpm build && npm exec --yes --package playwright@1.61.1 -- node scripts/verify-github-178.mjs",
     "verify:github-234": "pnpm --filter @file-viewer/core build && pnpm build && node scripts/verify-github-234.mjs",
     "verify:text-containers": "node scripts/verify-text-containers.mjs",
     "verify:fill-viewport": "node scripts/verify-fill-viewport.mjs"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "@xmldom/xmldom": "^0.9.12",
     "e-virt-table": "1.4.16",
     "jszip": "3.10.2",

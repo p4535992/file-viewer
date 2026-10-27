@@ -2,6 +2,7 @@ import {
   registerFileViewerZoomProvider,
   unregisterFileViewerZoomProvider,
 } from '../features/document/dom';
+import { installFileViewerImageHandTool } from '../features/document/imageHandTool';
 import {
   resolveFileViewerFitScale,
 } from '../features/document/fit';
@@ -34,7 +35,7 @@ const imageMimeMap: Record<string, string> = {
 
 const imageStyle = `
 .image-viewer{position:relative;width:100%;height:100%;overflow:auto;background:var(--file-viewer-render-surface-background,#eef1f4);box-sizing:border-box}
-.image-stage{min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.image-stage{width:max-content;min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
 .image-stage img{display:block;width:auto;max-width:none;margin:0 auto;border:0;box-shadow:0 18px 48px rgba(15,23,42,.16);background:#fff;cursor:zoom-in}
 .image-stage img:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
 .image-lightbox{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:40px;background:rgba(15,23,42,.9);box-sizing:border-box;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility 0s linear .18s}
@@ -192,6 +193,8 @@ export default async function renderImage(
   image.setAttribute('aria-haspopup', 'dialog');
   stage.append(image);
   root.append(stage);
+  const disposeHandTool = context?.options?.image?.handTool === true
+    ? installFileViewerImageHandTool(root, context.signal) : () => {};
 
   const lightbox = createLightbox(documentRef, src, t);
   const openLightbox = () => lightbox.open(image);
@@ -350,6 +353,7 @@ export default async function renderImage(
       }
       context?.registerThumbnailAdapter?.(null);
       unregisterFileViewerZoomProvider(root);
+      disposeHandTool();
       resizeObserver.disconnect();
       image.removeEventListener('load', updateViewportSize);
       image.removeEventListener('click', openLightbox);

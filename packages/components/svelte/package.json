@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/svelte",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Standard Svelte component package for File Viewer",
@@ -73,7 +73,8 @@
   "files": [
     "dist",
     "README.md",
-    "README.en.md"
+    "README.en.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json && node ../../../.github/scripts/build-svelte-runtime.mjs --package-root .",
@@ -83,7 +84,7 @@
     "svelte": ">=3.59 <6"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2"
+    "@file-viewer/core": "workspace:3.3.0"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

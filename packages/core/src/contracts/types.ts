@@ -676,9 +676,13 @@ export interface FileViewerArchivePasswordRequestContext {
 }
 
 export interface FileViewerPdfOptions {
+  /** Preview-only dark reading palette; follows the viewer theme when omitted. */
+  darkMode?: boolean
   /** Opt-in mouse hand-tool panning. Touch/pinch, links and form fields remain native. Default: false. */
   handTool?: boolean
   toolbar?: boolean
+  /** Hides only the PDF renderer's zoom controls; navigation and rotation remain available. Default: true. */
+  zoomToolbar?: boolean
   navigation?: boolean
   defaultNavigationVisible?: boolean
   thumbnails?: boolean
@@ -695,6 +699,10 @@ export interface FileViewerPdfOptions {
    */
   initialViewState?: FileViewerViewState
   streaming?: boolean | 'same-origin'
+  /** Opt out of PDF.js background streaming while retaining HTTP Range reads. Default: PDF.js defaults. */
+  disableStream?: boolean
+  /** Stop speculative PDF.js reads; requires disableStream:true to be fully effective. */
+  disableAutoFetch?: boolean
   rangeChunkSize?: number
   withCredentials?: boolean
   /**
@@ -787,6 +795,11 @@ export interface FileViewerDocxOptions {
   darkMode?: boolean
 }
 
+export interface FileViewerEpubOptions {
+  /** Follows the viewer theme when omitted; false retains the book's authored colors. */
+  darkMode?: boolean
+}
+
 export interface FileViewerSpreadsheetOptions {
   worker?: boolean | 'auto'
   workerUrl?: string
@@ -801,7 +814,7 @@ export interface FileViewerSpreadsheetOptions {
   resizableColumns?: boolean
   /** 允许用户在 Excel / CSV / ODS 预览中拖拽行头边界调整行高，默认关闭以保持历史行为。 */
   resizableRows?: boolean
-  /** 仅 Excel：用空白列标题、行号和单元格网格填满预览视口，默认 false；不扩展工作簿数据范围。 */
+  /** Fill spreadsheet previews with display-only blank grid cells by default; false keeps the used range only. */
   fillViewport?: boolean
 }
 
@@ -1670,11 +1683,14 @@ export interface FileViewerOptions {
   archive?: FileViewerArchiveOptions
   chm?: FileViewerChmOptions
   pdf?: FileViewerPdfOptions
+  epub?: FileViewerEpubOptions
   docx?: FileViewerDocxOptions
   presentation?: FileViewerPresentationOptions
   spreadsheet?: FileViewerSpreadsheetOptions
   /** Image renderer controls; also applies to multipage TIFF previews. */
   image?: {
+    /** Enable mouse drag panning of overflowing images. Defaults to false; touch scrolling and lightbox clicks are preserved. */
+    handTool?: boolean
     /**
      * Show rotation controls and allow view-state rotation. Defaults to true.
      * Set false for compact previews. Decoder/EXIF orientation is unchanged.

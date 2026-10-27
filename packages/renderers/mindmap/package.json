@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-mindmap",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Standalone XMind and mind map renderer plugin for File Viewer.",
@@ -50,14 +50,15 @@
     "dist",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json && node scripts/build-browser.mjs",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "@ljheee/xmind-parser": "^1.1.3",
     "@panzoom/panzoom": "^4.6.2",
     "jszip": "3.10.2"

@@ -1,4 +1,5 @@
 import {
+  installFileViewerImageHandTool,
   createFileViewerTranslator,
   createFileViewerViewStateChange,
   createFileViewerViewStateChangeEmitter,
@@ -43,7 +44,7 @@ const imageStyle = `
 .image-toolbar button:hover{border-color:#bfd2ea;background:#edf5ff;color:#1769d8}
 .image-toolbar button:focus-visible{outline:3px solid #60a5fa;outline-offset:1px}
 .image-rotation-meter{min-width:38px;color:#64748b;font:700 12px/1 system-ui,sans-serif;text-align:center}
-.image-stage{min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+.image-stage{width:max-content;min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
 .image-frame{position:relative;flex:0 0 auto}
 .image-stage img{position:absolute;top:50%;left:50%;display:block;width:auto;max-width:none;margin:0;border:0;box-shadow:0 18px 48px rgba(15,23,42,.16);background:#fff;cursor:zoom-in;transform:translate(-50%,-50%) rotate(var(--image-rotation,0deg));transform-origin:center center;transition:transform .18s ease}
 .image-stage img:focus-visible{outline:3px solid #2563eb;outline-offset:4px}
@@ -332,6 +333,8 @@ export default async function renderImage(
   stage.append(frame);
   if (rotationEnabled) root.append(toolbar);
   root.append(stage);
+  const disposeHandTool = context?.options?.image?.handTool === true
+    ? installFileViewerImageHandTool(root, context.signal) : () => {};
 
   const lightbox = createLightbox(documentRef, src, t);
   const openLightbox = () => lightbox.open(image);
@@ -629,6 +632,7 @@ export default async function renderImage(
 
   const cleanup = () => {
     destroyed = true;
+    disposeHandTool();
     context?.registerThumbnailAdapter?.(null);
     unregisterFileViewerViewStateProvider(root);
     unregisterFileViewerZoomProvider(root);

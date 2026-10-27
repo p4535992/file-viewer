@@ -21,6 +21,7 @@ import {
   normalizeFilename,
   readFileViewerBuffer,
   resolveFileViewerSourceFilename,
+  resolveFileViewerRemoteSourcePlan,
   resolveFileViewerColorScheme,
   resolveFileViewerToolbarOrder,
   resolveFileViewerToolbarPosition,
@@ -65,6 +66,9 @@ import {
   type RendererRegistry,
   type RendererSession,
 } from '../index';
+
+import { resolveFileViewerToolbarZoomButtons } from '../lifecycle/operations';
+import { createToolbarFocusRestorer } from './toolbar-focus';
 
 export type FileRef = FileViewerFileRef;
 
@@ -253,6 +257,7 @@ const RENDER_AFFECTING_VIEWER_OPTION_KEYS: readonly (keyof ViewerOptions)[] = [
   'archive',
   'chm',
   'pdf',
+  'epub',
   'docx',
   'presentation',
   'spreadsheet',
@@ -376,6 +381,9 @@ const resolveViewerLoadSource = async (
   options: {
     fetchFile?: ViewerFetchFile;
     signal?: AbortSignal;
+    streaming?: FileViewerPdfOptions['streaming'];
+    pageHref?: string;
+    acceptsPdfUrl?: boolean;
   } = {}
 ): Promise<FileViewerSource> => {
   const filename = resolveViewerSourceFilename(source);
@@ -404,6 +412,15 @@ const resolveViewerLoadSource = async (
   }
 
   if (source.url) {
+    const plan = resolveFileViewerRemoteSourcePlan({
+      url: source.url, filename, type,
+      pageHref: options.pageHref, streaming: options.streaming,
+    });
+    // A supplied transport owns authentication/acquisition and keeps its normal
+    // buffered contract. Only the default PDF URL path defers bytes to PDF.js.
+    if (!options.fetchFile && options.acceptsPdfUrl && plan.streamPdf) {
+      return { url: plan.url, filename: plan.filename, type: plan.extension, size: source.size };
+    }
     const fileRef = await (options.fetchFile || defaultFetchFile)({
       url: source.url,
       signal: options.signal,
@@ -530,10 +547,6 @@ const callApi = async <Result>(
     return fallback;
   }
   return action(api);
-};
-
-const isAbortError = (error: unknown) => {
-  return Boolean(error && typeof error === 'object' && (error as { name?: string }).name === 'AbortError');
 };
 
 const DEFAULT_TOOLBAR_AVAILABILITY: FileViewerOperationAvailability = {
@@ -791,6 +804,7 @@ export const mountViewer = (
     shell.dataset.viewerDensity = normalizeFileViewerUiDensity(currentOptions.options?.ui?.density);
     syncFileViewerRenderSurfaceBackground(shell, currentOptions.options);
   };
+  const captureToolbarFocus = createToolbarFocusRestorer(toolbarEl, contentEl);
   let controller: ViewerController | null = null;
   let searchDraft = '';
   const isSearchToolbarVisible = (
@@ -811,22 +825,31 @@ export const mountViewer = (
       return;
     }
 
+    const restoreToolbarFocus = captureToolbarFocus();
     syncShellTheme();
     const options = currentOptions.options || {};
     const toolbar = normalizeFileViewerToolbar(options);
     const availability = getToolbarAvailability();
     const showSearchToolbar = isSearchToolbarVisible(toolbar, options);
+    const zoomState = getToolbarZoomState();
+    const zoomButtons = resolveFileViewerToolbarZoomButtons({
+      toolbar,
+      zoomState,
+      renderedReady: state.ready,
+      hasError: !!state.error,
+    });
     const visibleToolbar = resolveVisibleFileViewerToolbar(toolbar, availability, showSearchToolbar);
+    visibleToolbar.zoom = zoomButtons.zoomIn || zoomButtons.zoomOut || zoomButtons.zoomReset;
     const showToolbar = hasVisibleFileViewerToolbarActions(visibleToolbar);
     const toolbarPosition = resolveFileViewerToolbarPosition(options, getCurrentExtension());
     const toolbarDisabled = state.loading || !!state.error;
-    const zoomState = getToolbarZoomState();
     const t = createFileViewerTranslator(options);
     toolbarEl.hidden = !showToolbar;
     toolbarEl.dataset.toolbarPosition = toolbarPosition;
     toolbarEl.replaceChildren();
 
     if (!showToolbar) {
+      restoreToolbarFocus();
       return;
     }
 
@@ -846,6 +869,7 @@ export const mountViewer = (
 
       const input = documentRef.createElement('input');
       input.type = 'search';
+      input.dataset.viewerToolbarKey = 'search-input';
       addPart(input, 'input');
       input.value = searchDraft;
       input.placeholder = t('toolbar.searchPlaceholder');
@@ -858,6 +882,7 @@ export const mountViewer = (
 
       const searchButton = documentRef.createElement('button');
       searchButton.type = 'submit';
+      searchButton.dataset.viewerToolbarKey = 'search-submit';
       addPart(searchButton, 'button');
       searchButton.textContent = t('toolbar.search');
       searchButton.title = t('toolbar.search');
@@ -865,11 +890,13 @@ export const mountViewer = (
       searchButton.disabled = toolbarDisabled;
 
       const previousButton = createButton(documentRef, '<', 'file-viewer-web-icon-button', () => controller?.previousSearchResult());
+      previousButton.dataset.viewerToolbarKey = 'search-previous';
       previousButton.title = t('toolbar.searchPrevious');
       previousButton.setAttribute('aria-label', t('toolbar.searchPrevious'));
       previousButton.disabled = toolbarDisabled || searchTotal < 1;
 
       const nextButton = createButton(documentRef, '>', 'file-viewer-web-icon-button', () => controller?.nextSearchResult());
+      nextButton.dataset.viewerToolbarKey = 'search-next';
       nextButton.title = t('toolbar.searchNext');
       nextButton.setAttribute('aria-label', t('toolbar.searchNext'));
       nextButton.disabled = toolbarDisabled || searchTotal < 1;
@@ -878,6 +905,7 @@ export const mountViewer = (
         searchDraft = '';
         await controller?.clearDocumentSearch();
       });
+      clearButton.dataset.viewerToolbarKey = 'search-clear';
       clearButton.title = t('toolbar.searchClear');
       clearButton.setAttribute('aria-label', t('toolbar.searchClear'));
       clearButton.disabled = toolbarDisabled || (!searchDraft && !searchState?.query);
@@ -909,9 +937,10 @@ export const mountViewer = (
       addPart(group, 'toolbar-group');
       group.setAttribute('aria-label', t('toolbar.zoomGroup'));
 
-      if (availability.zoomOut) {
+      if (zoomButtons.zoomOut) {
         const button = createButton(documentRef, '-', 'file-viewer-web-icon-button', () => controller?.zoomOut());
         button.title = t('toolbar.zoomOut');
+        button.dataset.viewerToolbarKey = 'zoom-out';
         button.setAttribute('aria-label', t('toolbar.zoomOut'));
         button.disabled = isFileViewerZoomButtonDisabled({
           action: 'canZoomOut',
@@ -922,9 +951,10 @@ export const mountViewer = (
         group.appendChild(button);
       }
 
-      if (availability.zoomReset) {
+      if (zoomButtons.zoomReset) {
         const meter = createButton(documentRef, zoomState.label, 'file-viewer-web-zoom-meter', () => controller?.resetZoom());
         meter.title = t('toolbar.zoomReset');
+        meter.dataset.viewerToolbarKey = 'zoom-meter';
         meter.disabled = isFileViewerZoomButtonDisabled({
           action: 'canReset',
           availability,
@@ -940,7 +970,7 @@ export const mountViewer = (
         ));
       }
 
-      if (availability.zoomReset) {
+      if (zoomButtons.zoomReset) {
         // Placed before the zoom-in button (not after) so that toggling this
         // button's visibility never shifts the zoom-in button's position: the
         // toolbar group is right-aligned, and both icon buttons share the same
@@ -949,6 +979,7 @@ export const mountViewer = (
         // into an accidental reset (see GitHub issue #88).
         const button = createButton(documentRef, '1:1', 'file-viewer-web-icon-button', () => controller?.resetZoom());
         button.title = t('toolbar.zoomReset');
+        button.dataset.viewerToolbarKey = 'zoom-reset';
         button.setAttribute('aria-label', t('toolbar.zoomReset'));
         button.disabled = isFileViewerZoomButtonDisabled({
           action: 'canReset',
@@ -959,9 +990,10 @@ export const mountViewer = (
         group.appendChild(button);
       }
 
-      if (availability.zoomIn) {
+      if (zoomButtons.zoomIn) {
         const button = createButton(documentRef, '+', 'file-viewer-web-icon-button', () => controller?.zoomIn());
         button.title = t('toolbar.zoomIn');
+        button.dataset.viewerToolbarKey = 'zoom-in';
         button.setAttribute('aria-label', t('toolbar.zoomIn'));
         button.disabled = isFileViewerZoomButtonDisabled({
           action: 'canZoomIn',
@@ -979,6 +1011,7 @@ export const mountViewer = (
 
     const appendToolbarButton = (
       visible: boolean | undefined,
+      key: string,
       label: string,
       title: string,
       onClick: () => void | Promise<unknown>
@@ -987,6 +1020,7 @@ export const mountViewer = (
         return;
       }
       const button = createButton(documentRef, label, '', onClick);
+      button.dataset.viewerToolbarKey = key;
       button.title = title;
       button.disabled = toolbarDisabled;
       toolbarEl.appendChild(button);
@@ -1026,6 +1060,7 @@ export const mountViewer = (
         }
       });
       addPart(button, 'theme-toggle');
+      button.dataset.viewerToolbarKey = 'theme';
       setThemeButtonIcon(button, currentTheme);
       button.title = title;
       button.setAttribute('aria-label', title);
@@ -1042,6 +1077,7 @@ export const mountViewer = (
       } else if (item === 'download') {
         appendToolbarButton(
           visibleToolbar.download,
+          'download',
           t('toolbar.download'),
           t('toolbar.downloadTitle'),
           () => controller?.downloadOriginalFile()
@@ -1058,6 +1094,7 @@ export const mountViewer = (
           menu.dataset.open = menu.dataset.open === 'true' ? 'false' : 'true';
         });
         trigger.title = t('toolbar.printTitle');
+        trigger.dataset.viewerToolbarKey = 'print';
         trigger.setAttribute('aria-label', t('toolbar.printTitle'));
         trigger.setAttribute('aria-haspopup', 'menu');
         trigger.disabled = toolbarDisabled;
@@ -1075,6 +1112,7 @@ export const mountViewer = (
           await controller?.printRenderedHtml();
         });
         directButton.title = t('toolbar.printTitle');
+        directButton.dataset.viewerToolbarKey = 'print-direct';
         directButton.setAttribute('role', 'menuitem');
         directButton.disabled = toolbarDisabled;
 
@@ -1083,6 +1121,7 @@ export const mountViewer = (
           await controller?.printWithMask();
         });
         maskButton.title = t('toolbar.printMaskTitle');
+        maskButton.dataset.viewerToolbarKey = 'print-mask';
         maskButton.setAttribute('role', 'menuitem');
         maskButton.disabled = toolbarDisabled;
 
@@ -1098,6 +1137,7 @@ export const mountViewer = (
       } else if (item === 'exportHtml') {
         appendToolbarButton(
           visibleToolbar.exportHtml,
+          'export-html',
           t('toolbar.exportHtml'),
           t('toolbar.exportHtmlTitle'),
           () => controller?.exportRenderedHtml()
@@ -1106,6 +1146,7 @@ export const mountViewer = (
         appendThemeToolbar();
       }
     });
+    restoreToolbarFocus(state.loading || (!state.ready && !state.error));
   };
   let refreshSystemThemeDocument: (() => Promise<void>) | null = null;
   const handleViewerColorSchemeChange = () => {
@@ -1178,16 +1219,25 @@ export const mountViewer = (
       state.loading = true;
       state.error = null;
       notifyState();
+      await instance.prepare?.();
+      if (disposed || controller?.signal.aborted || abortController !== controller) {
+        return null;
+      }
+      const extension = nextSource.type || getExtension(resolveViewerSourceFilename(nextSource));
+      const renderer = instance.getRenderer(extension);
       const resolvedSource = await resolveViewerLoadSource(nextSource, {
+        acceptsPdfUrl: renderer?.sourceAccess === 'stream-preferred' && Boolean(renderer.load),
         fetchFile: coreOptions.fetchFile,
         signal: controller?.signal,
+        streaming: currentOptions.options?.pdf?.streaming,
+        pageHref: documentRef.defaultView?.location?.href,
       });
       if (disposed || controller?.signal.aborted || abortController !== controller) {
         return null;
       }
       return await instance.load(resolvedSource);
     } catch (error) {
-      if (isAbortError(error) && controller?.signal.aborted) {
+      if (disposed || controller?.signal.aborted || abortController !== controller) {
         return null;
       }
       state.loading = false;

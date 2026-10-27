@@ -56,9 +56,14 @@ jobs:
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm --filter @file-viewer/core --filter @file-viewer/renderer-text --filter @file-viewer/capability-mermaid --filter @file-viewer/renderer-drawing --filter @file-viewer/renderer-dicom build
 
+      - name: Configure bounded Ubuntu archive downloads
+        if: steps.impact.outputs.runtime != 'false'
+        run: sudo python3 .github/scripts/prepare-browser-apt.py
+
       - name: Install Chromium and WebKit
         id: browsers
         if: steps.impact.outputs.runtime != 'false'
+        timeout-minutes: 10
         run: pnpm exec playwright install --with-deps chromium webkit
 
       - name: Verify DICOM cold consumers, six transfer syntaxes and visible PNGs
@@ -94,7 +99,7 @@ jobs:
 
       - name: Retain cold browser runtime evidence
         if: always() && steps.impact.outputs.runtime != 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cold-browser-runtime-evidence
           path: |
@@ -180,6 +185,32 @@ jobs:
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm build
 
+      - name: Verify source and runtime build-path privacy
+        if: steps.impact.outputs.runtime != 'false'
+        run: |
+          node --test packages/renderers/3d/scripts/geo3d-build-path-privacy.test.mjs
+          node packages/renderers/signature/scripts/verify-artifacts.mjs
+
+      - name: Verify CAD source HTTPS bytes and rebuild against the actual Full runtime
+        if: steps.impact.outputs.runtime != 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          node --test .github/scripts/frozen-validation-registry.test.mjs packages/build-support/bundle-notices.test.mjs packages/build-support/cad-corresponding-source.test.mjs packages/build-support/cad-source-offer.test.mjs packages/build-support/cad-source-reference.test.mjs packages/build-support/stage-cad-runtime.test.mjs
+          mkdir -p output/cad-corresponding-source
+          node packages/build-support/verify-full-workspace-notices.mjs | tee output/cad-corresponding-source/workspace-copyrights.log
+          node packages/build-support/verify-cad-corresponding-source.mjs --rebuild --remote | tee output/cad-corresponding-source/rebuild.log
+
+      - name: Retain CAD corresponding-source evidence
+        if: always() && steps.impact.outputs.runtime != 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cad-corresponding-source-evidence
+          path: output/cad-corresponding-source/**
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Verify Web Full asset manifest
         if: steps.impact.outputs.runtime != 'false'
         run: node --test packages/components/web-full/test/asset-manifest.test.mjs
@@ -200,13 +231,20 @@ jobs:
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm type-check
 
+      - name: Configure bounded Ubuntu archive downloads
+        if: steps.impact.outputs.runtime != 'false'
+        run: sudo python3 .github/scripts/prepare-browser-apt.py
+
       - name: Install Chromium, Firefox and WebKit
         if: steps.impact.outputs.runtime != 'false'
+        timeout-minutes: 10
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run the issue regression gates
         if: steps.impact.outputs.runtime != 'false'
-        run: pnpm test
+        run: |
+          pnpm test
+          PPTX_DRAWING_OUTPUT="$GITHUB_WORKSPACE/output/pptx-drawing-semantics" pnpm --filter @file-viewer/pptx verify:drawing-semantics
 
       - name: Verify the installed DOCX diagonal-border repair
         if: steps.impact.outputs.runtime != 'false'
@@ -279,23 +317,30 @@ jobs:
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm --filter @file-viewer/vite-plugin verify:lite-consumer
 
-      - name: Verify PDF hand tool and native DOC font table in Chromium and WebKit
+      - name: Install the Noto CJK font cohort
         if: steps.impact.outputs.runtime != 'false'
+        timeout-minutes: 10
         run: |
           # WenQuanYi's CJK vertical advances can be zero in Chromium. The
           # geometry contract needs the same reviewed Noto cohort as DOCX CI.
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          if ! dpkg-query -W -f='${Status}' fonts-noto-cjk 2>/dev/null | grep -Fxq 'install ok installed'; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fi
           mkdir -p output/doc-font-table
           fc-match -f '%{family}\n' 'Noto Serif CJK SC' | tee output/doc-font-table/font-cohort.log
           grep -q 'Noto Serif CJK SC' output/doc-font-table/font-cohort.log
           dpkg-query -W fonts-noto-cjk >> output/doc-font-table/font-cohort.log
+
+      - name: Verify PDF hand tool and native DOC font table in Chromium and WebKit
+        if: steps.impact.outputs.runtime != 'false'
+        run: |
           pnpm --filter @file-viewer/renderer-pdf verify:hand-tool
           pnpm --filter @file-viewer/doc verify:font-table-browser
 
       - name: Retain intermediate renderer browser evidence
         if: always() && steps.impact.outputs.runtime != 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: intermediate-renderer-browser-evidence
           path: |
@@ -305,6 +350,14 @@ jobs:
             output/vite-lite-consumer/*.png
             output/pdf-hand-tool/**/report.json
             output/pdf-hand-tool/**/*.png
+            output/pdf-text-selection/**/report.json
+            output/pdf-text-selection/**/*.png
+            output/pdf-url-streaming/**/*.json
+            output/pdf-url-streaming/**/*.png
+            output/pptx-drawing-semantics/*.json
+            output/pptx-drawing-semantics/*.png
+            output/issue-419/**/*.json
+            output/issue-419/**/*.png
             output/doc-font-table/*.json
             output/doc-font-table/*.png
             output/doc-font-table/font-cohort.log
@@ -351,7 +404,7 @@ jobs:
 
       - name: Upload packed-consumer failure evidence
         if: failure() && steps.impact.outputs.runtime != 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-issue-consumer-evidence
           path: output/packed-issue-consumer/*/angular-regression-evidence
@@ -360,7 +413,7 @@ jobs:
 
       - name: Upload packed-consumer security evidence
         if: always() && steps.impact.outputs.runtime != 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-consumer-security-evidence
           path: |
@@ -376,9 +429,27 @@ jobs:
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm verify:chm-renderer
 
-      - name: Verify Vue 3 toolbar in Chromium
+      - name: Verify Vue 3 and Web toolbar in Chromium and WebKit
         if: steps.impact.outputs.runtime != 'false'
         run: pnpm verify:vue3-toolbar-browser
+
+      - name: Retain zoom toolbar browser evidence
+        if: always() && steps.impact.outputs.runtime != 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zoom-toolbar-${{ github.sha }}
+          path: output/zoom-toolbar-browser/**
+          retention-days: 7
+
+      - name: Retain spreadsheet formula and image hand-tool evidence
+        if: always() && steps.impact.outputs.runtime != 'false'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: formula-and-image-interactions-${{ github.sha }}
+          path: |
+            output/issue-414/**
+            output/issue-392/**
+          retention-days: 7
 
       - name: Verify untrusted renderer markup sanitization
         if: steps.impact.outputs.runtime != 'false'
@@ -397,7 +468,7 @@ jobs:
 
       - name: Retain packed Web Full evidence
         if: always() && steps.impact.outputs.runtime != 'false'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-full-packed-evidence
           path: |

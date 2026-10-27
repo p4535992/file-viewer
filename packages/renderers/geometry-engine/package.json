@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/geometry-engine",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Framework-neutral geometry kernel boundary package for STEP, IGES, IFC, 3DM, and BREP preview routes in File Viewer.",
@@ -55,7 +55,8 @@
     "assets",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json && node scripts/build-browser.mjs",

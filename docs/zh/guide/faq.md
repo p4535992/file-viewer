@@ -1,8 +1,4 @@
 ---
-
-> **Maintainer-only commands:** this page contains complete-workspace release or verification examples that are not part of the public checkout. Public contributors should use the commands in `/README.md` or `/docs/guide/development.md`.
-
-<!-- FILE_VIEWER_MAINTAINER_COMMANDS -->
 description: "快速排查 File Viewer 组件选型、Full 包资源、Worker/WASM 路径、格式支持、移动端布局、授权与部署问题。"
 ---
 
@@ -43,9 +39,9 @@ description: "快速排查 File Viewer 组件选型、Full 包资源、Worker/WA
 
 ## 如何确认 DOCX 0.3.31 修复已经生效
 
-当前 Word renderer 的主线程和离线 Worker 均使用 `@file-viewer/docx@0.3.36`。它包含日文文字、VML 文本框、Apache POI `w:hMerge`、多分节浮动图形、复杂框架、定位页面、修订、段落标记和软换行修复，并默认阻断文档中的外部资源。
+当前 Word renderer 的主线程和离线 Worker 均使用 `@file-viewer/docx@0.3.39`。它包含日文文字、VML 文本框、Apache POI `w:hMerge`、多分节浮动图形、复杂框架、定位页面、修订、段落标记和软换行修复，并默认阻断文档中的外部资源。
 
-升级后需要重新发布同版本 viewer assets，并在浏览器网络面板确认 `vendor/docx/docx.worker.js?file-viewer-docx=0.3.36`（可能位于自定义 `file-viewer/` 基址下）真实返回 JavaScript。不要混用旧版本 Worker；如果仍看到旧布局，请清理 CDN 或 Service Worker 缓存后重新加载文档。
+升级后需要重新发布同版本 viewer assets，并在浏览器网络面板确认 `vendor/docx/docx.worker.js?file-viewer-docx=0.3.39`（可能位于自定义 `file-viewer/` 基址下）真实返回 JavaScript。不要混用旧版本 Worker；如果仍看到旧布局，请清理 CDN 或 Service Worker 缓存后重新加载文档。
 
 ## npm 11 安装时报 `Cannot read properties of null (reading 'matches')`
 
@@ -70,11 +66,7 @@ pnpm install
 
 离线 tgz 场景也要注意：只安装一个顶层 tgz 时，它的依赖仍需要能从 npm registry、私有 registry 或同目录依赖 tarball 中解析到。企业内网建议把 `@file-viewer/vue3`、所选 preset、preset 内部 renderer、`@file-viewer/core` 等同版本 tarball 一起放入私有 npm 源，或在安装命令/业务 package.json 中同时声明这些本地 tgz。
 
-项目内置了安装烟测命令，发布前可复核 npm 最新版兼容性:
-
-```bash
-pnpm verify:npm-install-smoke
-```
+重新安装后，运行业务项目自己的构建来检查依赖闭包。仓库的[冷安装消费者工作流](https://github.com/flyfish-dev/file-viewer/blob/main/.github/workflows/public-ci.yml)会单独验证固定版本的发布归档。
 
 ## URL 预览为什么失败或空白
 

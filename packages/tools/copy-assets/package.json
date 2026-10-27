@@ -1,6 +1,6 @@
 {
   "name": "file-viewer-copy-assets",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Official npx CLI for copying File Viewer Worker, WASM, font, and vendor assets into self-hosted web projects.",
@@ -54,7 +54,8 @@
     "viewer",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && node ../../build-support/ensure-node-bin.mjs packages/tools/copy-assets/dist/cli.js && pnpm test",

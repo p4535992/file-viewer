@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/renderer-hangul",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Offline HWP v5 and HWPX renderer plugin for File Viewer.",
@@ -56,14 +56,15 @@
     "README.md",
     "README.en.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json --force && node scripts/build-worker.mjs",
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "@ssabrojs/hwpxjs": "0.4.0",
     "@xmldom/xmldom": "^0.9.12",
     "cfb": "^1.2.2",

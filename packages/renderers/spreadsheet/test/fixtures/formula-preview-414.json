@@ -1,0 +1,11 @@
+{
+  "purpose": "Human review screenshot, not a pixel-golden baseline",
+  "generator": "pnpm test:spreadsheet-github-414",
+  "fixture": "../formulaWorkbook.mjs",
+  "input": "Independently generated OOXML workbook; no reporter-file bytes",
+  "runtimeCommit": "a2c82bfd76481b43305e3cb14f7b39ef984a94f3",
+  "browser": "Chromium 153.0.8010.12",
+  "viewport": { "width": 1000, "height": 700 },
+  "mode": "Real spreadsheet Worker",
+  "visibleResults": ["Recovered cross-sheet1123", "Retained numeric format", "Unsupported =UNKNOWN() visible", "Authoritative cached zero retained"]
+}

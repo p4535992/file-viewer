@@ -1,13 +1,14 @@
 {
   "name": "@flyfish-group/file-viewer-site",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vue-tsc --noEmit -p tsconfig.json && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "verify:responsive": "node scripts/verify-responsive-layout.mjs"
+    "verify:responsive": "node scripts/verify-responsive-layout.mjs",
+    "verify:contact": "node scripts/verify-contact-qr.mjs"
   },
   "dependencies": {
     "@lucide/vue": "^1.43.0",

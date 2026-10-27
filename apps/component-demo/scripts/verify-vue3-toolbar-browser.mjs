@@ -4,6 +4,7 @@ import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
 import { delimiter, extname, join, normalize, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { verifyZoomToolbarBrowser } from './verify-zoom-toolbar-browser.mjs'
 
 // The verifier runs from the repository root in local and public CI.
 const distDir = resolve('apps/component-demo/dist')
@@ -15,11 +16,11 @@ const importPlaywright = async () => {
   try {
     return await import('playwright')
   } catch (originalError) {
-    const candidatePaths = process.env.PATH
-      ?.split(delimiter)
-      .filter(pathEntry => pathEntry.endsWith(`${sep}node_modules${sep}.bin`))
-      .map(binDir => resolve(binDir, '..'))
-      .filter(pathEntry => existsSync(pathEntry)) || []
+    const candidatePaths =
+      process.env.PATH?.split(delimiter)
+        .filter((pathEntry) => pathEntry.endsWith(`${sep}node_modules${sep}.bin`))
+        .map((binDir) => resolve(binDir, '..'))
+        .filter((pathEntry) => existsSync(pathEntry)) || []
 
     for (const candidatePath of candidatePaths) {
       try {
@@ -40,10 +41,12 @@ const importPlaywright = async () => {
 }
 
 const playwrightModule = await importPlaywright()
-const { chromium } = playwrightModule.chromium ? playwrightModule : playwrightModule.default
+const { chromium, webkit } = playwrightModule.chromium ? playwrightModule : playwrightModule.default
 
 if (!existsSync(entryPath)) {
-  throw new Error(`Built Vue 3 component demo is missing: ${entryPath}. Run pnpm build:component-demo first.`)
+  throw new Error(
+    `Built Vue 3 component demo is missing: ${entryPath}. Run pnpm build:component-demo first.`
+  )
 }
 
 const contentTypes = {
@@ -53,6 +56,9 @@ const contentTypes = {
   '.md': 'text/markdown; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
   '.png': 'image/png',
+  '.pdf': 'application/pdf',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
   '.svg': 'image/svg+xml',
   '.wasm': 'application/wasm'
 }
@@ -60,9 +66,8 @@ const contentTypes = {
 const server = createServer((request, response) => {
   const requestUrl = new URL(request.url || '/', 'http://127.0.0.1')
   const cleanPath = decodeURIComponent(requestUrl.pathname)
-  const candidate = cleanPath === '/'
-    ? entryPath
-    : join(distDir, normalize(cleanPath).replace(/^[/\\]+/, ''))
+  const candidate =
+    cleanPath === '/' ? entryPath : join(distDir, normalize(cleanPath).replace(/^[/\\]+/, ''))
   const filePath = existsSync(candidate) && statSync(candidate).isFile() ? candidate : entryPath
   response.writeHead(200, {
     'Content-Type': contentTypes[extname(filePath).toLowerCase()] || 'application/octet-stream',
@@ -84,10 +89,10 @@ try {
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
   const errors = []
-  page.on('console', message => {
+  page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
   })
-  page.on('pageerror', error => errors.push(error.message))
+  page.on('pageerror', (error) => errors.push(error.message))
 
   await page.goto(`${baseUrl}/vue3.html?smoke=toolbar-slots`, {
     waitUntil: 'domcontentloaded',
@@ -107,7 +112,7 @@ try {
     const toolbar = root?.querySelector('.viewer-actions')
     return {
       hasOpenShadowRoot: !!root,
-      childOrder: Array.from(toolbar?.children || []).map(element => {
+      childOrder: Array.from(toolbar?.children || []).map((element) => {
         if (element.querySelector('[data-testid="vue3-toolbar-start"]')) return 'start'
         if (element.classList.contains('viewer-search-actions')) return 'search'
         if (element.querySelector('[data-testid="vue3-toolbar-end"]')) return 'end'
@@ -115,24 +120,48 @@ try {
       })
     }
   })
-  assert.equal(shadowContract.hasOpenShadowRoot, true, 'The default Vue 3 integration must use its open Shadow DOM path.')
+  assert.equal(
+    shadowContract.hasOpenShadowRoot,
+    true,
+    'The default Vue 3 integration must use its open Shadow DOM path.'
+  )
   assert.deepEqual(
     shadowContract.childOrder,
     ['start', 'search', 'end'],
     'toolbar-start and toolbar-end must wrap the built-in search group in Shadow DOM.'
   )
-  assert.equal(await startSlot.getAttribute('data-api-search'), 'true', 'toolbar-start did not receive the public API.')
-  assert.equal(await endSlot.getAttribute('data-api-search'), 'true', 'toolbar-end did not receive the public API.')
-  assert.equal(await startSlot.getAttribute('data-download-available'), 'true', 'Slot availability did not update after render.')
-  assert.ok(Number(await startSlot.getAttribute('data-zoom-scale')) > 0, 'Slot zoom state is invalid.')
+  assert.equal(
+    await startSlot.getAttribute('data-api-search'),
+    'true',
+    'toolbar-start did not receive the public API.'
+  )
+  assert.equal(
+    await endSlot.getAttribute('data-api-search'),
+    'true',
+    'toolbar-end did not receive the public API.'
+  )
+  assert.equal(
+    await startSlot.getAttribute('data-download-available'),
+    'true',
+    'Slot availability did not update after render.'
+  )
+  assert.ok(
+    Number(await startSlot.getAttribute('data-zoom-scale')) > 0,
+    'Slot zoom state is invalid.'
+  )
 
   await startSlot.click()
   await page.locator('.flyfish-search-match--active').first().waitFor({ state: 'visible', timeout })
-  await page.waitForFunction(() => {
-    const button = document.querySelector('#vue3-viewer .file-viewer-vue3-shadow-host')
-      ?.shadowRoot?.querySelector('[data-testid="vue3-toolbar-start"]')
-    return Number(button?.getAttribute('data-search-total') || 0) > 0
-  }, undefined, { timeout })
+  await page.waitForFunction(
+    () => {
+      const button = document
+        .querySelector('#vue3-viewer .file-viewer-vue3-shadow-host')
+        ?.shadowRoot?.querySelector('[data-testid="vue3-toolbar-start"]')
+      return Number(button?.getAttribute('data-search-total') || 0) > 0
+    },
+    undefined,
+    { timeout }
+  )
   await endSlot.click()
   assert.equal(
     await page.evaluate(() => document.body.dataset.vue3ToolbarEndClicked),
@@ -156,11 +185,20 @@ try {
     'A search-only toolbar must be absent when the active renderer cannot search.'
   )
 
-  const actionableErrors = errors.filter(message => !/favicon|ResizeObserver loop/i.test(message))
+  const actionableErrors = errors.filter((message) => !/favicon|ResizeObserver loop/i.test(message))
   assert.deepEqual(actionableErrors, [], `Browser console errors:\n${actionableErrors.join('\n')}`)
 
-  console.log('[verify-vue3-toolbar-browser] Vue 3 full, Shadow DOM slots, reactive slot API and renderer-bounded search verified.')
+  console.log(
+    '[verify-vue3-toolbar-browser] Vue 3 full, Shadow DOM slots, reactive slot API and renderer-bounded search verified.'
+  )
+  await verifyZoomToolbarBrowser({ browser, baseUrl, engine: 'chromium' })
+  const webkitBrowser = await webkit.launch({ headless: true })
+  try {
+    await verifyZoomToolbarBrowser({ browser: webkitBrowser, baseUrl, engine: 'webkit' })
+  } finally {
+    await webkitBrowser.close()
+  }
 } finally {
   await browser?.close()
-  await new Promise(resolveClose => server.close(resolveClose))
+  await new Promise((resolveClose) => server.close(resolveClose))
 }

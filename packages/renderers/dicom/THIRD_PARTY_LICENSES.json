@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "generatedFrom": {
     "packageName": "@file-viewer/renderer-dicom",
-    "packageVersion": "3.2.2",
+    "packageVersion": "3.3.0",
     "packageManager": "pnpm",
     "command": "pnpm --filter @file-viewer/renderer-dicom list --depth Infinity --json; direct runtime and three bundled Cornerstone SDK roots only"
   },
@@ -516,7 +516,7 @@
     },
     {
       "name": "@file-viewer/core",
-      "version": "3.2.2",
+      "version": "3.3.0",
       "license": "Apache-2.0",
       "direct": true,
       "optional": false,
@@ -528,7 +528,7 @@
     },
     {
       "name": "@file-viewer/renderer-dicom",
-      "version": "3.2.2",
+      "version": "3.3.0",
       "license": "Apache-2.0",
       "direct": false,
       "optional": false,
@@ -765,6 +765,20 @@
       "noticeFiles": []
     },
     {
+      "name": "caniuse-lite",
+      "version": "1.0.30001816",
+      "license": "CC-BY-4.0",
+      "direct": false,
+      "optional": false,
+      "firstParty": false,
+      "author": "Ben Briggs <beneb.info@gmail.com> http://beneb.info",
+      "repository": "https://github.com/browserslist/caniuse-lite",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "noticeFiles": []
+    },
+    {
       "name": "comlink",
       "version": "4.4.2",
       "license": "Apache-2.0",
@@ -948,7 +962,7 @@
     },
     {
       "name": "dompurify",
-      "version": "3.4.16",
+      "version": "3.4.17",
       "license": "Apache-2.0",
       "declaredLicense": "(MPL-2.0 OR Apache-2.0)",
       "direct": false,

@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/thumbnail",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "High-performance browser thumbnail generation for File Viewer.",
@@ -35,7 +35,8 @@
     "dist",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "node scripts/clean-dist.mjs && tsc -b tsconfig.json --force && node ../renderers/ebook/scripts/build-epub-engine.mjs --package-root=.",
@@ -43,7 +44,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.2.2",
+    "@file-viewer/core": "workspace:3.3.0",
     "jszip": "3.10.2",
     "modern-screenshot": "^4.7.0"
   },
@@ -51,7 +52,7 @@
     "@xmldom/xmldom": "0.9.12",
     "epubjs": "0.3.93",
     "esbuild": "^0.28.1",
-    "happy-dom": "^20.14.3",
+    "happy-dom": "^21.0.4",
     "typescript": "^6.0.3",
     "vitest": "5.0.3"
   },

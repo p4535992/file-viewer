@@ -1,6 +1,7 @@
 import { computed, watch, type ComputedRef, type Ref, type ShallowRef } from 'vue'
 import {
   createFileViewerToolbarControllerActionHandlers,
+  resolveFileViewerToolbarZoomButtons,
 } from '@file-viewer/core'
 import type {
   FileRenderExportAdapter,
@@ -76,6 +77,12 @@ export const useViewerToolbar = ({
   })
 
   const operationAvailability = computed<FileViewerOperationAvailability>(() => toolbarState.value.operationAvailability)
+  const zoomButtons = computed(() => resolveFileViewerToolbarZoomButtons({
+    toolbar: normalizedToolbar.value,
+    zoomState,
+    renderedReady: renderedReady.value,
+    hasError: !!error.value
+  }))
   const visibleToolbar = computed<FileViewerToolbarOptions>(() => toolbarState.value.visibleToolbar)
   const toolbarOrder = computed<FileViewerResolvedToolbarItem[]>(() => toolbarState.value.toolbarOrder)
   const showToolbar = computed(() => toolbarState.value.showToolbar)
@@ -102,6 +109,7 @@ export const useViewerToolbar = ({
 
   return {
     operationAvailability,
+    zoomButtons,
     visibleToolbar,
     toolbarOrder,
     showToolbar,

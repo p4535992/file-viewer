@@ -159,6 +159,14 @@ try {
     const browserReport = JSON.parse(await readFile(path.join(output, 'browsers/report.json'), 'utf8'));
     assert.equal(browserReport.passed, true);
     assert.ok(browserReport.checks.length > 0 && browserReport.checks.every(check => check.passed));
+    await run('chromium-webkit-native-selection', process.execPath, [path.join(import.meta.dirname, 'verify-text-selection-browser.mjs')], consumer, {
+      ...env, PDF_SELECTION_INSTALLED_ROOT: consumer, PDF_SELECTION_OUTPUT: path.join(output, 'selection'),
+    });
+    const selectionReport = JSON.parse(await readFile(path.join(output, 'selection/report.json'), 'utf8'));
+    assert.equal(selectionReport.passed, true);
+    assert.equal(selectionReport.cases.length, 8);
+    assert.ok(selectionReport.cases.every(check => check.passed));
+    report.selectionCases = selectionReport.cases.length;
     report.browserStatus = 'passed';
     report.status = 'passed';
   }

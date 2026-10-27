@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/svelte-full",
-  "version": "3.2.2",
+  "version": "3.3.0",
   "private": false,
   "type": "module",
   "description": "Full Svelte package with preset-all; Vite publishes deployment-base/file-viewer assets, and other bundlers use the included same-version copy CLI.",
@@ -77,7 +77,8 @@
     "dist",
     "scripts/copy-assets.mjs",
     "README.md",
-    "README.en.md"
+    "README.en.md",
+    "README.zh-CN.md"
   ],
   "scripts": {
     "build": "tsc -b tsconfig.json && node ../../../.github/scripts/build-svelte-runtime.mjs --package-root .",
@@ -87,9 +88,9 @@
     "svelte": ">=3.59 <6"
   },
   "dependencies": {
-    "@file-viewer/preset-all": "workspace:3.2.2",
-    "@file-viewer/svelte": "workspace:3.2.2",
-    "file-viewer-copy-assets": "workspace:3.2.2"
+    "@file-viewer/preset-all": "workspace:3.3.0",
+    "@file-viewer/svelte": "workspace:3.3.0",
+    "file-viewer-copy-assets": "workspace:3.3.0"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

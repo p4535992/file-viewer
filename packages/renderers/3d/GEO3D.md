@@ -82,6 +82,31 @@ with static decoder scripts under a nested custom asset path.
 
 ## Usage
 
+Raw LAS/LAZ with unresolved CRS metadata is rejected by default. Citation text
+is descriptive and is never converted into a guessed EPSG code. When the data
+owner has verified the source CRS, configure it explicitly without rewriting
+the original file:
+
+```ts
+const renderer = createGeo3dRenderer({
+  assetBaseUrl: '/file-viewer/vendor/geo3d/',
+  giro3d: {
+    sources: { las: { sourceCrs: 'EPSG:32632' } },
+  },
+})
+```
+
+Use the dataset's verified CRS, rather than the example code above. For a CRS
+without a built-in definition, pass `{ id, definition }` as `sourceCrs`, with an
+offline WKT or PROJ definition, or register it through `crsDefinitions`.
+This fallback applies only to unresolved raw LAS/LAZ. A conflicting GeoKey or
+decoded WKT CRS is rejected; a resolved file definition remains authoritative.
+Resolvable authority definitions, including built-in UTM codes, are preferred
+before registering any same-ID definition supplied with this fallback.
+IDs must match exactly, including when equivalent definitions use different
+names. `giro3d.instance.crs` must also match the source CRS: this point-cloud
+path does not reproject coordinates. No EPSG-registry network request is made.
+
 ```ts
 import { modelRenderer } from '@file-viewer/renderer-3d'
 import { createGeo3dRenderer } from '@file-viewer/renderer-3d/geo3d'
@@ -320,6 +345,12 @@ color-map bounds to the data range.
 The point-cloud scene CRS must match the dataset CRS. An incompatible scene is
 rejected before application hooks; no runtime point-cloud reprojection is
 performed. Reproject the dataset beforehand when a different scene is required.
+LAS/LAZ GeoKeyDirectory CRS codes are read as well as WKT. A projected EPSG
+code takes precedence over its underlying geographic CRS. Supply unregistered
+CRS definitions through `crsDefinitions` for offline use. A declared CRS with
+only citation text or an unsupported/user-defined GeoKey fails explicitly;
+citation names are not guessed into EPSG codes or silently assigned the scene
+CRS. Add authoritative WKT/EPSG metadata to such a dataset before loading it.
 
 ### GeoTIFF / COG versus ordinary TIFF
 

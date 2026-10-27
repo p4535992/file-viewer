@@ -1168,6 +1168,22 @@ export const hasVisibleFileViewerToolbarActions = (toolbar: FileViewerToolbarOpt
   );
 };
 
+/** Button presence follows UI policy; current operation state only disables it. */
+export const resolveFileViewerToolbarZoomButtons = ({
+  toolbar,
+  zoomState,
+  renderedReady,
+  hasError = false,
+}: Pick<ResolveFileViewerToolbarStateInput, 'toolbar' | 'zoomState' | 'renderedReady' | 'hasError'>): Pick<FileViewerOperationAvailability, 'zoomIn' | 'zoomOut' | 'zoomReset'> => {
+  const visible = !!toolbar.zoom && renderedReady && !hasError &&
+    (zoomState.canZoomIn || zoomState.canZoomOut || zoomState.canReset);
+  return {
+    zoomIn: visible && isFileViewerToolbarOperationVisible(toolbar, 'zoom-in'),
+    zoomOut: visible && isFileViewerToolbarOperationVisible(toolbar, 'zoom-out'),
+    zoomReset: visible && isFileViewerToolbarOperationVisible(toolbar, 'zoom-reset'),
+  };
+};
+
 export const isFileViewerZoomButtonDisabled = ({
   toolbarDisabled = false,
   availability,
@@ -1214,6 +1230,8 @@ export const resolveFileViewerToolbarState = ({
     operationAvailability,
     options?.search !== false && searchAvailable
   );
+  const zoomButtons = resolveFileViewerToolbarZoomButtons({ toolbar, ...availabilityInput });
+  visibleToolbar.zoom = zoomButtons.zoomIn || zoomButtons.zoomOut || zoomButtons.zoomReset;
 
   return {
     operationAvailability,

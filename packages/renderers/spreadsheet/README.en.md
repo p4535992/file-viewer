@@ -1,5 +1,7 @@
 # @file-viewer/renderer-spreadsheet
 
+[English](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/spreadsheet/README.md) · [简体中文](https://github.com/flyfish-dev/file-viewer/blob/main/packages/renderers/spreadsheet/README.zh-CN.md)
+
 Standalone spreadsheet renderer package for Flyfish File Viewer. It is powered by `styled-exceljs` and `e-virt-table`, previews XLSX, XLSM, XLSB, XLS, CSV, TSV, ODS, FODS, Numbers, and compatible spreadsheet files in the browser, and resolves the optional worker URL through the File Viewer asset manifest for offline enterprise deployments.
 
 ## Usage
@@ -38,13 +40,13 @@ const options = {
 
 ## Fill the viewport for small Excel sheets
 
-`options.spreadsheet.fillViewport` defaults to `false` and applies only to Excel formats (XLSX / XLSM / XLSB / XLS and their templates). Enable it to add empty column headers (A / B / …), row numbers and grid cells using the worksheet's default sizes. Small and empty sheets fill the preview area, with padding recalculated on container resize, zoom and sheet changes. Padding uses the virtual canvas and does not stretch existing cells or allocate an entire Excel worksheet.
+`options.spreadsheet.fillViewport` defaults to `true` for spreadsheet formats, including Excel and CSV / TSV. Small and empty sheets show blank column headers (A / B / …), row numbers and grid cells using the worksheet's default sizes. Padding recalculates on resize, zoom and sheet changes, stays virtual, and never stretches existing cells or changes workbook data. Set it to `false` to show only the used range.
 
 ```ts
 const options = {
   rendererMode: 'replace',
   renderers: spreadsheetRenderer,
-  spreadsheet: { fillViewport: true },
+  spreadsheet: { fillViewport: false }, // Optional: show only the used range.
 }
 ```
 
@@ -61,3 +63,9 @@ For private deployments, override it with `options.spreadsheet.workerUrl`. The o
 ## Migration Note
 
 Spreadsheet preview has moved completely out of `@file-viewer/core`. Core now only keeps the asset manifest, shared types, and a compatibility error message, and it no longer installs `styled-exceljs`, `e-virt-table`, or `tinycolor2` by default. Install this package and pass it through `renderers`, or use `@file-viewer/preset-all` for the complete spreadsheet experience.
+
+## Formulas without saved results
+
+Saved formula results, including zero, remain authoritative. When an exporter omits the saved result, the preview can recover local/cross-sheet references, ranges, arithmetic/comparisons, `IF`, `ROUND`, `ROW` and `SUM` with a bounded offline evaluator. Cell number formats are retained.
+
+This is not a full Excel calculation engine. Cyclic, external, unsupported or over-budget formulas are displayed as their original `=formula` text instead of a fabricated zero. No JavaScript or remote formula resources are evaluated. Main-thread and Worker paths use the same recovery logic.

@@ -1,44 +1,46 @@
 <p align="center">
   <a href="https://file-viewer.app/en/"><img src="docs/public/_media/logo.png" width="92" alt="File Viewer logo"></a>
 </p>
-
 <h1 align="center">File Viewer</h1>
 
 <p align="center">
   File Viewer provides read-only previews for Office, PDF/OFD, CAD, archives, email and more, in the browser.<br>
   Built-in renderers need no conversion server; Workers, WASM and fonts can be self-hosted.
 </p>
-
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
-
 <p align="center">
   <a href="https://demo.file-viewer.app/">Live demo</a> ·
   <a href="https://doc.file-viewer.app/">Documentation</a> ·
   <a href="https://doc.file-viewer.app/guide/formats">Format matrix</a> ·
   <a href="https://github.com/flyfish-dev/file-viewer/releases">Releases</a>
 </p>
-
 <p align="center">
   <a href="https://www.npmjs.com/package/@file-viewer/core"><img src="https://img.shields.io/npm/v/@file-viewer/core?logo=npm" alt="npm version"></a>
   <a href="https://github.com/flyfish-dev/file-viewer/releases"><img src="https://img.shields.io/github/v/release/flyfish-dev/file-viewer?logo=github" alt="Latest release"></a>
   <a href="https://github.com/flyfish-dev/file-viewer/actions/workflows/public-ci.yml"><img src="https://github.com/flyfish-dev/file-viewer/actions/workflows/public-ci.yml/badge.svg?branch=main" alt="Public CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/source%20license-Apache--2.0-blue" alt="Source license: Apache-2.0"></a>
 </p>
-
 <p align="center">
   <a href="https://www.npmjs.com/package/@file-viewer/core"><img src="https://img.shields.io/npm/dm/@file-viewer/core?logo=npm&amp;label=core%20downloads%2Fmonth" alt="Core npm downloads per month"></a>
   <a href="https://github.com/flyfish-dev/file-viewer/stargazers"><img src="https://img.shields.io/github/stars/flyfish-dev/file-viewer?style=flat&amp;logo=github" alt="GitHub stars"></a>
   <a href="https://hub.docker.com/r/flyfishdev/file-viewer"><img src="https://img.shields.io/docker/pulls/flyfishdev/file-viewer?logo=docker" alt="Docker pulls"></a>
   <a href="https://github.com/sponsors/wybaby168"><img src="https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors" alt="GitHub Sponsors"></a>
 </p>
-
 <p align="center">
   <a href="https://demo.file-viewer.app/"><img src="docs/public/_media/file-viewer-demo-v3-en.webp" width="920" alt="File Viewer live demo: Word, Excel, PowerPoint, 3D model, CAD drawing and binary inspector"></a>
 </p>
-
 <p align="center">⭐ If File Viewer helps you, please <a href="https://github.com/flyfish-dev/file-viewer">star the repo</a>.</p>
+
+The current source prepares a `3.3.0` release candidate with the published DOCX `0.3.39` engine. File Viewer packages and production sites have not been released from this candidate. See [the candidate notes](CHANGELOG.md).
+
+## Why File Viewer
+
+- **275 registered extensions** (225 stable, 50 experimental) across 47 preview pipelines: Word, Excel, PowerPoint, PDF, OFD, DWG/DXF, STEP/IFC, archives, email, images, media, code, DICOM and more.
+- **No conversion server.** Files are parsed and rendered in the browser; Workers, WASM and fonts can be self-hosted for offline networks.
+- **Loads only what a file needs.** Heavy engines (PDF, CAD, Office, 3D) are lazy-loaded per format.
+- **One API, every framework.** Web Component, Vue 3, Vue 2.7/2.6, React 16.8–19, Svelte and jQuery share options, events and controller methods.
 
 ## Quick start
 
@@ -90,7 +92,7 @@ The eight `*-full` packages preserve the published v2.4 `preset-all` compatibili
 
 File Viewer is a viewer, not an editor. Fonts, vendor-specific features, encrypted files and very large inputs can affect fidelity or memory use. Check the format matrix before relying on a specialist format in production, and test with representative files from your own workflow.
 
-The source tree adds opt-in [BPMN diagrams](docs/guide/bpmn.md) and [XML validation/transformation profiles](docs/guide/xml-profiles.md). These are not included in npm 3.1.1; use the guides when testing the source build.
+Opt-in [BPMN diagrams](docs/guide/bpmn.md) (`@file-viewer/renderer-drawing/bpmn`) and [XML validation/transformation profiles](docs/guide/xml-profiles.md) (`@file-viewer/renderer-text/xml-profiles`) ship on npm since 3.1.2; they are not added to Full packages.
 
 ## Runtime assets
 
@@ -125,11 +127,17 @@ pnpm verify:browser-smoke
 
 If a documented format fails, please include a sanitized sample or a public reproduction link, the browser version and the expected result. A screenshot alone rarely identifies a parser or rendering bug. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request; report security issues through [SECURITY.md](SECURITY.md).
 
+New contributors: [local development](docs/guide/development.md), [international collaboration](docs/guide/collaboration.md), and [translations](docs/guide/translations.md). English and Chinese are welcome; other languages can include a short English summary.
+
 Maintenance is supported through [GitHub Sponsors](https://github.com/sponsors/wybaby168). For private deployment or work requiring a response commitment, see [enterprise support](https://dev.flyfish.group/shop).
 
 ### Thanks to Our Sponsors
 
-<a href="https://github.com/p4535992"><img src="docs/public/_media/sponsors/sponsors.svg" width="320" alt="GitHub sponsor @p4535992"></a>
+<p align="center">
+  <img src="docs/public/_media/sponsors/sponsors.svg" width="320" alt="Project sponsors @p4535992 and @jtianling">
+  <br>
+  <sub><a href="https://github.com/p4535992">@p4535992</a> · <a href="https://github.com/jtianling">@jtianling</a></sub>
+</p>
 
 ## Star History
 
@@ -144,3 +152,7 @@ Maintenance is supported through [GitHub Sponsors](https://github.com/sponsors/w
 ## License
 
 File Viewer's own source is Apache-2.0. The DWG/DWF/DWFX runtime (`@flyfish-dev/cad-viewer` and `dwf-viewer`) is **AGPL-3.0-only**; using or distributing CAD support requires complying with that license. See [LICENSE](LICENSE) and the runtime package notices.
+
+## PDF URL loading
+
+Standard component PDF URLs stream on the same origin by default. Use `pdf.streaming: true` plus an explicit filename/type for CORS-enabled signed URLs, or `false` to buffer once. For demanded Range reads set both `pdf.disableStream` and `pdf.disableAutoFetch` to `true`; server Range/CORS support is required. Explicit bytes and caller-owned fetch hooks retain precedence.

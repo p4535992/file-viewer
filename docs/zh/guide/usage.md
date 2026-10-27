@@ -257,13 +257,15 @@ const options = {
 | `spreadsheet.workerUrl` | 自定义 Excel/XLSX Worker 地址，默认尝试当前部署 base 下的 `vendor/xlsx/sheet.worker.js` |
 | `spreadsheet.textEncoding` | CSV / TSV 文本编码，默认 `auto`：优先 UTF-8 BOM 和严格 UTF-8，否则使用浏览器 GB18030 解码（同时覆盖 GBK）；也可显式指定 `utf-8`、`gbk` 或 `gb18030` |
 | `spreadsheet.resizableColumns` | 是否允许用户在 Excel / CSV / ODS 等表格预览中拖拽表头边界调整列宽，默认 `false` 以保持历史兼容；Demo 默认开启，便于查看被截断的长文本 |
-| `spreadsheet.fillViewport` | 仅 Excel 有效，默认 `false`。按工作表默认行高/列宽补充空白字母列标题、行号与虚拟网格，使小内容或空 Sheet 填满视口，随 resize/缩放重算；不拉伸已有单元格，不改变数据、used-range、导出、搜索或内容统计。其他表格格式忽略。最小示例：`options: { spreadsheet: { fillViewport: true } }` |
+| `spreadsheet.fillViewport` | 默认 `true`，适用于 Excel、CSV / TSV 等表格格式。按默认行高/列宽补充空白字母列标题、行号和虚拟网格，随 resize/缩放重算；不拉伸已有单元格，不改变数据、used-range、导出、搜索或内容统计。设为 `false` 可只显示已用区域。 |
+| `pdf.darkMode`、`epub.darkMode` | 正文默认跟随 `theme`。观察到的主题属性、系统配色与 Vanilla core 主题更新可无需重载地调整配色；框架组件与工具栏/controller 选项更新可能重新初始化预览。`false` 保留原始配色，`true` 强制深色阅读。PDF 仅对预览使用滤镜（图片颜色也会变化），不改变原文件或导出像素；EPUB 调整文字、背景，不反相图片。 |
 | `presentation.workerUrl` | 自定义 `@file-viewer/pptx` Worker 地址，显式配置优先。未配置时先识别打包器已输出或应用资产基址下的标准复制清单；未知路径不会猜测应用相对 URL。Angular 子路径部署应使用标准 `file-viewer-copy-assets`，参见 [Web 接入](/zh/guide/quickstart-web) |
 | `cad.showImageExport` | 是否显示 CAD 渲染器内的 PNG/JPEG 按钮，默认 `true`。隐藏它们不影响共享工具栏的原文件下载；操作仍同时受下载和 HTML 导出权限约束 |
 | `presentation.workerType` | PPTX Worker 类型，通常保持默认 `module`；只有旧 WebView、特殊 CSP 或构建系统要求 classic Worker 时再覆盖 |
 | `presentation.pptModuleUrl` / `presentation.pptWorkerUrl` / `presentation.pptWasmUrl` / `presentation.pptFontUrl` | PowerPoint 97–2003 `.ppt` 0.3.4 的 ESM、Worker、WASM 和 CJK 字体高级路径覆盖；Demo、Vite/full、copy-assets 与 CDN/IIFE 的标准布局无需配置 |
 | `presentation.pptWorker` / `presentation.pptCache` | 控制二进制 PPT 的 Worker 模式和有界 IndexedDB 帧缓存；默认均自动启用可用能力 |
-| `pdf.streaming` | PDF URL 渐进读取策略，默认 `same-origin`；设为 `true` 时跨域也尝试 URL 直连读取，设为 `false` 时完全回到 Blob 下载后预览 |
+| `pdf.streaming` | 标准框架组件统一使用 PDF URL 策略，默认 `same-origin`；`true` 允许 CORS 跨域直读，`false` 完整下载一次后预览。签名 URL 可用 filename/type 标明 PDF；显式字节与自定义 fetchFile 优先。 |
+| `pdf.disableStream` / `pdf.disableAutoFetch` | PDF.js 网络控制；仅按需读取 Range 时同时设为 true，省略时保留 PDF.js 默认值。 |
 | `pdf.toolbar` | 是否显示 PDF 渲染器自己的页码、缩放和旋转工具栏。独立预览建议显示；左右文档比对等紧凑场景可设为 `false`，让 PDF 与其他格式的正文区域对齐 |
 | `pdf.navigation` / `pdf.defaultNavigationVisible` | 是否启用左侧导航窗格以及初始是否展开。导航窗格支持页面列表和目录树切换 |
 | `pdf.thumbnails` | 页面列表是否显示真实页面缩略图，默认 `false`；开启后只对可见页懒渲染缩略图，避免大 PDF 一次性生成所有 canvas |

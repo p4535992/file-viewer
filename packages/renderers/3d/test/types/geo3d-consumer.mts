@@ -27,6 +27,7 @@ declare const hostColor: ColorLayerModule.default
 declare const hostElevation: ElevationLayerModule.default
 
 createGeo3dRenderer({
+  giro3d: { sources: { las: { sourceCrs: 'EPSG:32632' } } },
   configureInstance(context) {
     const { instance, signal } = context
     const real: Instance = instance
@@ -152,6 +153,14 @@ createGeo3dRenderer({
     void original
   },
 })
+
+createGeo3dRenderer({ giro3d: { sources: { las: {
+  sourceCrs: { id: 'LOCAL:survey', definition: '+proj=utm +zone=32 +datum=WGS84 +units=m' }
+} } } })
+createGeo3dRenderer({ giro3d: { sources: { las: {
+  // @ts-expect-error A source CRS must be an explicit EPSG code or an offline definition.
+  sourceCrs: 'guess from citation'
+} } } })
 
 declare const viewer: Geo3dViewerInstance
 if (viewer.format === 'cog' || viewer.format === 'geotiff') {

@@ -12,6 +12,15 @@ import {
 } from '../packages/core/src'
 
 describe('@file-viewer/core option serialization helpers', () => {
+  it('preserves opt-in image panning through JSON and URL options', () => {
+    for (const handTool of [true, false]) {
+      const options = { image: { handTool, rotation: false } }
+      expect(parseFileViewerOptions(serializeFileViewerOptions(options)!)).toEqual(options)
+      const params = new URLSearchParams()
+      setFileViewerOptionsSearchParam(params, options)
+      expect(getFileViewerOptionsSearchParam(params)).toEqual(options)
+    }
+  })
   it('preserves the opt-in Excel viewport option through public JSON and URL parameters', () => {
     const options = { spreadsheet: { fillViewport: true, worker: false as const } }
     expect(parseFileViewerOptions(serializeFileViewerOptions(options)!)).toEqual(options)

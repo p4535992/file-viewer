@@ -168,6 +168,15 @@ export function createPointCloudWithCancellation(PointCloud, options) {
   return { entity, stop }
 }
 
+/** LAS ranges are half-open: a complete final EVLR may end exactly at EOF. */
+export function sliceLasMetadataBuffer(buffer, begin, end) {
+  if (!Number.isSafeInteger(begin) || !Number.isSafeInteger(end) || begin < 0 ||
+      end < begin || end > buffer.byteLength) {
+    throw new Error('Invalid LAS metadata range.')
+  }
+  return new Uint8Array(buffer.slice(begin, end))
+}
+
 /** Isolate pool ownership/disposal and preserve per-request cancellation. */
 export function adaptPointSource(name, text) {
   if (!['LASSource', 'COPCSource'].includes(name) || hash(text) !== SOURCE_HASHES[name]) {
@@ -184,6 +193,17 @@ export function adaptPointSource(name, text) {
   }
   body = body.replace(`export default class ${name}`, `class ${name}`)
   if (name === 'COPCSource') body = body.replace('export function isCOPCSource', 'function isCOPCSource')
+  if (name === 'LASSource') {
+    const originalRange = `const getBufferChunk = (begin, end) => {
+      if (end >= buffer.byteLength) {
+        throw new Error();
+      }
+      return new Uint8Array(buffer.slice(begin, end));
+    };`
+    if (!body.includes(originalRange)) throw new Error('Unexpected reviewed LAS metadata range reader.')
+    body = body.replace(originalRange, 'const getBufferChunk = (begin, end) => sliceLasMetadataBuffer(buffer, begin, end);')
+    body = `${sliceLasMetadataBuffer.toString()}\n${body}`
+  }
   if (name === 'COPCSource') {
     const originalHierarchy = `async function loadSubtree(getter, root, nodeMap) {
   const {
@@ -256,11 +276,15 @@ export async function buildPointAdapters() {
     outfile: join(out, 'geo3dPointFactories.js'),
     plugins: [{ name: 'source-local-giro3d-pools', setup(builder) {
       builder.onResolve({ filter: /^geo3d-owned:/ }, args => {
-        const path = paths[args.path.slice('geo3d-owned:'.length)]
-        if (!path) throw new Error('Unknown owned point adapter.')
-        return { path, namespace: 'owned-point-source' }
+        const name = args.path.slice('geo3d-owned:'.length)
+        if (!paths[name]) throw new Error('Unknown owned point adapter.')
+        return { path: name, namespace: 'owned-point-source' }
       })
-      builder.onLoad({ filter: /.*/, namespace: 'owned-point-source' }, args => ({ contents: adapted[args.path], loader: 'js', resolveDir: dirname(args.path) }))
+      builder.onLoad({ filter: /.*/, namespace: 'owned-point-source' }, args => {
+        const path = paths[args.path]
+        if (!path) throw new Error('Unknown owned point module identity.')
+        return { contents: adapted[path], loader: 'js', resolveDir: dirname(path) }
+      })
       // Keep the host's actual engine classes, CRS registry and cache identity.
       // Only the two reviewed sources are copied. No engine prototype is patched.
       builder.onResolve({ filter: /^\./, namespace: 'owned-point-source' }, args => {
