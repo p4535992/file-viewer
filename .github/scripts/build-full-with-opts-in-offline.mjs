@@ -37,7 +37,7 @@ await mkdir(out, { recursive: true })
 const all = (await readdir(out)).filter(n => n.endsWith('.tgz')).sort()
 assert.equal(all.length, 9, 'Exactly nine custom npm packages are required')
 for (const name of all) {
-  assert.match(name, /-3\.2\.2\.tgz$/, 'Unexpected package version')
+  assert.ok(name.endsWith(`-${version}.tgz`), `Unexpected package version: ${name} (expected ${version})`)
   await cp(join(out, name), join(stage, 'npm-tarballs', name))
 }
 // pnpm deploy copies the complete compiled production dependency closure.
