@@ -4,6 +4,7 @@ run-name: full-with-opts-in v3.3.0-r1 Geo3D+XML from ${{ github.ref_name }} (${{
 
 on:
   # Build the complete v3.3.0-r1 opt-in offline distribution (including Geo3D and XML).
+  # Trigger a fresh branch build from the current head; prior run retries use old commits.
   push:
     branches:
       - build/web-full-with-opts-in
