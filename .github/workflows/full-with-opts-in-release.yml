@@ -1,9 +1,9 @@
 name: Build full-with-opts-in release
 
-run-name: full-with-opts-in v3.3.0-r1 Geo3D+XML from ${{ github.ref_name }} (${{ github.run_number }})
+run-name: full-with-opts-in v3.3.1-r1 Geo3D+XML from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
-  # Build the complete v3.3.0-r1 opt-in offline distribution (including Geo3D and XML).
+  # Build the complete v3.3.1-r1 opt-in offline distribution (including Geo3D and XML).
   # Trigger a fresh branch build from the current head; prior run retries use old commits.
   push:
     branches:
@@ -142,11 +142,11 @@ jobs:
           "$tool_dir/wasm-opt" --version
           echo "$tool_dir" >> "$GITHUB_PATH"
 
-      # Upstream 3.3.0 retained-license staging validates generated Workers.
+      # Upstream 3.3.1 retained-license staging validates generated Workers.
       # Its standard asset pack also requires the staged manifest before it builds.
-      # Require the v3.3.0-pinned IFC peer engine cohort in the preset.
+      # Require the v3.3.1-pinned IFC peer engine cohort in the preset.
       # Prebuild the three notice-bearing Workers AND the OCCT geometry bundle.
-      # The upstream 3.3.0 asset stager verifies OCCT's generated LGPL notice
+      # The upstream 3.3.1 asset stager verifies OCCT's generated LGPL notice
       # before copying assets; a source-only checkout lacks that notice.
       - name: Build core and license-verified Worker prerequisites
         run: |
@@ -294,7 +294,8 @@ jobs:
             resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
             offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 Flyfish optional asset packs', 'Geo3D LAS/LAZ/3TZ/COG local decoders and workers', 'XML XSD/XSLT local WASM engines', '9 wrapper tarballs'] },
-            upstreamReleaseTag: 'v3.3.0',
+            upstreamReleaseTag: 'v3.3.1',
+            upstreamReleaseCommit: '410ed36a192c3da06ea21f66837b73bc09e9c0a5',
             upstreamRepository: 'flyfish-dev/file-viewer',
             sourceRepository: process.env.GITHUB_REPOSITORY,
             sourceRef: process.env.GITHUB_REF,
@@ -368,7 +369,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
-          RELEASE_TAG: v3.3.0-full-with-opts-in-r1
+          RELEASE_TAG: v3.3.1-full-with-opts-in-r1
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::Release $RELEASE_TAG already exists; refusing to overwrite it."
@@ -377,7 +378,7 @@ jobs:
 
           notes="$RUNNER_TEMP/full-with-opts-in-release-notes.md"
           cat > "$notes" <<EOF
-          ## File Viewer v3.3.0 — full-with-opts-in (complete Geo3D + XML)
+          ## File Viewer v3.3.1 — full-with-opts-in (complete Geo3D + XML)
 
           Built from branch build/web-full-with-opts-in at commit $GITHUB_SHA.
           The default branch is not modified.
@@ -411,7 +412,7 @@ jobs:
             "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "File Viewer v3.3.0 — full-with-opts-in (Geo3D + XML)" \
+            --title "File Viewer v3.3.1 — full-with-opts-in (Geo3D + XML)" \
             --notes-file "$notes" \
             --prerelease \
             --latest=false

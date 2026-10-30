@@ -49,6 +49,15 @@ const resources = computed(() => [
       : 'Create a project or integrate an existing app. Review the plan, then verify the setup.',
     label: props.isZh ? '探索 File Viewer CLI' : 'Explore File Viewer CLI',
     href: props.cliUrl
+  },
+  {
+    icon: Code2,
+    title: props.isZh ? 'Flutter 应用内文件预览' : 'File previews inside Flutter',
+    text: props.isZh
+      ? '从 pub.dev 安装，离线资源随包交付。macOS 已通过 Apple Silicon 与 Intel 实机验证。'
+      : 'Install from pub.dev with bundled offline assets and application warm-up. Apple Silicon and Intel Macs are validated.',
+    label: props.isZh ? 'Flutter 接入文档' : 'Flutter documentation',
+    href: `https://flutter.file-viewer.app/${props.isZh ? 'zh' : 'en'}/docs/quickstart/`
   }
 ])
 const questions = computed(() => [
@@ -100,7 +109,7 @@ const questions = computed(() => [
     </header>
     <div class="framework-strip" :aria-label="isZh ? '支持的集成方式' : 'Supported integrations'">
       <span><Code2 :size="17" />Vanilla / Web</span><span>Vue 3</span><span>Vue 2.6 / 2.7</span
-      ><span>React / Legacy</span><span>Svelte</span><span>jQuery</span><span>TypeScript</span>
+      ><span>React / Legacy</span><span>Svelte</span><span>jQuery</span><span>Flutter · Preview</span><span>TypeScript</span>
     </div>
     <div class="resource-grid">
       <a

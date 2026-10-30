@@ -1,9 +1,9 @@
 {
   "name": "@file-viewer/svelte",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": false,
   "type": "module",
-  "description": "Standard Svelte component package for File Viewer",
+  "description": "Lightweight Svelte file viewer. Add PDF, Office and other browser-side previews with renderer presets.",
   "keywords": [
     "file-viewer",
     "document-preview",
@@ -31,7 +31,7 @@
     "url": "git+https://github.com/flyfish-dev/file-viewer.git",
     "directory": "packages/components/svelte"
   },
-  "homepage": "https://doc.file-viewer.app/",
+  "homepage": "https://github.com/flyfish-dev/file-viewer#readme",
   "bugs": {
     "url": "https://github.com/flyfish-dev/file-viewer/issues"
   },
@@ -84,7 +84,7 @@
     "svelte": ">=3.59 <6"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.3.0"
+    "@file-viewer/core": "workspace:3.3.1"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import JSZip from 'jszip';
+import { utils, write } from 'styled-exceljs';
+import { createSpreadsheetParserContext, parseSpreadsheetWorkbook, parseSpreadsheetSheet } from '../dist/spreadsheet/worker/sheetjs/parser.js';
+const book=utils.book_new();
+const sheet=utils.aoa_to_sheet([['标题','数量','备注'],['合并注释'.repeat(40),'',''],['短',2,'短']]);
+sheet['!cols']=[undefined,{wpx:98}];sheet['!rows']=[{hpt:44.7}];
+sheet['!merges']=[{s:{r:1,c:0},e:{r:1,c:2}}];
+utils.book_append_sheet(book,sheet,'Layout');
+const zip=await JSZip.loadAsync(write(book,{type:'array',bookType:'xlsx'}));
+const part='xl/worksheets/sheet1.xml',xml=await zip.file(part).async('string');
+zip.file(part,xml.replace(/<sheetFormatPr\b[^>]*\/>/,'').replace('<sheetData>','<sheetFormatPr defaultColWidth="9" defaultRowHeight="18"/><sheetData>'));
+const context=createSpreadsheetParserContext();
+assert.equal((await parseSpreadsheetWorkbook(context,await zip.generateAsync({type:'arraybuffer'})))[0].type,'sheets');
+const data=parseSpreadsheetSheet(context,{sheet:0})[0].payload.sheetData;
+assert.deepEqual(data.defaults,{colWidth:63,rowHeight:24});
+assert.equal(data.structure.colWidths[0],undefined);assert.equal(data.structure.colWidths[1],98);
+assert.equal(data.structure.rowHeights[0],60);
+assert.deepEqual(data.structure.merge,[{row:1,col:0,rowspan:1,colspan:3}]);
+assert.equal(data.data[1][0],'合并注释'.repeat(40));
+const styles=await zip.file('xl/styles.xml').async('string');
+const formatted=await zip.file(part).async('string');
+for(const [name,size,mdw] of [['SimSun',10.5,7],['SimSun',11,8],['SimSun',12,8],['NSimSun',22,15],['Calibri',11,7]]){
+  zip.file('xl/styles.xml',styles.replace(/<name val="[^"]*"\/>/,`<name val="${name}"/>`).replace(/<sz val="[^"]*"\/>/,`<sz val="${size}"/>`));
+  zip.file(part,formatted.replace(/<cols>[\s\S]*?<\/cols>/,'<cols><col min="2" max="2" width="12" customWidth="1"/><col min="3" max="3" width="20" customWidth="1"/></cols>'));
+  const context=createSpreadsheetParserContext();
+  await parseSpreadsheetWorkbook(context,await zip.generateAsync({type:'arraybuffer'}));
+  const rendered=parseSpreadsheetSheet(context,{sheet:0})[0].payload.sheetData;
+  assert.equal(rendered.defaults.colWidth,9*mdw);
+  assert.deepEqual(Array.from(rendered.structure.colWidths),[undefined,12*mdw,20*mdw]);
+}
+console.log('[spreadsheet] Stored defaults, explicit widths, point-based row heights and merged notes passed.');

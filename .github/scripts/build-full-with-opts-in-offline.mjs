@@ -9,14 +9,14 @@ import { createRequire } from 'node:module'
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 
-const version = '3.3.0'
+const version = '3.3.1'
 const repo = process.env.GITHUB_WORKSPACE || process.cwd()
 const out = process.env.OUT_DIR
 const temp = process.env.RUNNER_TEMP
 if (!out || !temp || !resolve(out).startsWith(resolve(temp) + '/')) {
   throw new Error('OUT_DIR must be inside RUNNER_TEMP')
 }
-const folderName = 'file-viewer-v' + version + '-full-with-opts-in-r2-offline'
+const folderName = 'file-viewer-v' + version + '-full-with-opts-in-r1-offline'
 const stage = join(temp, folderName)
 const archive = join(out, folderName + '.tar.gz')
 function run(exe, args) {
@@ -223,9 +223,9 @@ for (const needed of ['@file-viewer/assets-standard', '@file-viewer/assets-typst
 }
 const ledger = { entries: assetPackDetails, paths: await walk(assetRoot) }
 const document = [
-  '# File Viewer v3.3.0 — full opt-in offline distribution',
+  '# File Viewer v3.3.1 — full opt-in offline distribution',
   '',
-  'Built against flyfish-dev/file-viewer v3.3.0 with additive opt-in wrappers.',
+  'Built against flyfish-dev/file-viewer v3.3.1 with additive opt-in wrappers.',
   'web/ includes precompiled ESM and all installed production dependencies,',
   'including the project renderer packages and third-party runtime modules.',
   'Use web/dist/index.js with your bundler without recompiling File Viewer.',
@@ -265,6 +265,7 @@ const sizes = Object.fromEntries([
 const manifest = {
   schemaVersion: 1,
   upstreamVersion: version,
+  upstreamReleaseCommit: '410ed36a192c3da06ea21f66837b73bc09e9c0a5',
   sourceCommit: process.env.GITHUB_SHA || null,
   tarballs: all,
   runtimeAssets: {

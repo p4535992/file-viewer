@@ -9,7 +9,7 @@ import {
   MarkdownCopyButton,
   ViewOptionsPopover,
 } from 'fumadocs-ui/layouts/docs/page';
-import { IconArrowUpRight, IconClock, IconGitBranch } from '@tabler/icons-react';
+import { IconArrowUpRight, IconClock } from '@tabler/icons-react';
 import { getMDXComponents } from '@/components/mdx';
 import { getPageMarkdownUrl, source } from '@/lib/source';
 import { localePath, site } from '@/lib/shared';
@@ -88,7 +88,6 @@ export async function FileViewerDocsPage({ locale, slug }: DocsPageProps) {
         <div className="fv-page-meta">
           <span className="fv-page-meta__category">{pageCategory(locale, page.slugs)}</span>
           <span><IconClock size={14} stroke={1.9} aria-hidden="true" />{minutes} {locale === 'zh' ? '分钟阅读' : 'min read'}</span>
-          <span><IconGitBranch size={14} stroke={1.9} aria-hidden="true" />v2.3.0 · Stable</span>
         </div>
         <DocsTitle>{page.data.title}</DocsTitle>
         <DocsDescription className="fv-page-description">{page.data.description}</DocsDescription>

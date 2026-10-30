@@ -25,6 +25,7 @@ import type {
 } from '../type.js'
 import { getTintColor, indexedColors } from './color.js'
 import { parseCellRichText, richTextToPlainText } from './richText.js'
+import type { StoredSheetLayout } from './sheetLayout.js'
 
 const EXCEL_DEFAULT_COLUMN_WIDTH = 8.43
 const EXCEL_DEFAULT_ROW_HEIGHT_PT = 15
@@ -85,9 +86,9 @@ const toFiniteNumber = (value: unknown) => {
 }
 
 const getDefaultColumnWidth = () => {
-  const converter = (utils as any).col_width_to_px
-  const value = typeof converter === 'function' ? converter(EXCEL_DEFAULT_COLUMN_WIDTH) : undefined
-  return Math.ceil(toFiniteNumber(value) ?? 64)
+  // Excel's displayed default is 8.43 characters plus five pixels of padding,
+  // not an already encoded OOXML <col width> value.
+  return Math.floor(EXCEL_DEFAULT_COLUMN_WIDTH * 7 + 5)
 }
 
 const getDefaultRowHeight = () => {
@@ -146,12 +147,17 @@ export const formatCellValue = (cell?: CellObject) => {
   return `${cell.v}`
 }
 
-const getColumnPixelWidth = (column?: SheetColumnMeta) => {
+const getColumnPixelWidth = (column?: SheetColumnMeta, maximumDigitWidth = 7) => {
   if (!column) {
     return undefined
   }
   if (column.hidden) {
     return 0
+  }
+
+  const storedWidth = toFiniteNumber(column.width)
+  if (maximumDigitWidth !== 7 && storedWidth !== undefined && storedWidth >= 0) {
+    return Math.trunc(((256 * storedWidth + Math.trunc(128 / maximumDigitWidth)) / 256) * maximumDigitWidth)
   }
 
   // styled-exceljs 在 browserPixels 模式下会优先输出 wpx，这是最接近浏览器渲染的列宽。
@@ -221,16 +227,17 @@ const getRowPixelHeight = (rowMeta?: SheetRowMeta) => {
   if (rowMeta.hidden) {
     return 0
   }
-  const hpx = toFiniteNumber(rowMeta.hpx)
-  if (hpx !== undefined && hpx >= 0) {
-    return Math.ceil(hpx)
-  }
-
+  // The parser retains OOXML points in hpt, but its legacy hpx conversion
+  // uses 96/96. Prefer the authoritative points and convert to CSS pixels once.
   const hpt = toFiniteNumber(rowMeta.hpt)
   if (hpt !== undefined && hpt >= 0) {
     const converter = (utils as any).row_height_to_px
     const converted = typeof converter === 'function' ? toFiniteNumber(converter(hpt)) : undefined
     return Math.ceil(converted ?? hpt * 96 / 72)
+  }
+  const hpx = toFiniteNumber(rowMeta.hpx)
+  if (hpx !== undefined && hpx >= 0) {
+    return Math.ceil(hpx)
   }
   return undefined
 }
@@ -417,9 +424,10 @@ const getCellStyle = (cellStyle?: Record<string, any>) => {
   if (font.bold || cellStyle?.bold) {
     style.fontWeight = 'bold'
   }
-  const fontSize = font.sz || cellStyle?.sz
-  if (fontSize) {
-    style.fontSize = `${fontSize}px`
+  const fontSize = Number(font.sz || cellStyle?.sz)
+  if (Number.isFinite(fontSize) && fontSize > 0) {
+    // Excel 字号以 pt 存储；模型统一输出 CSS px，视图层再单独应用缩放。
+    style.fontSize = `${fontSize * 96 / 72}px`
   }
   const fontName = font.name || cellStyle?.name
   if (fontName) {
@@ -517,7 +525,15 @@ export default class SheetJsModel implements SheetModel {
   }
 
   public get defaults() {
-    return SheetJsModel.defaults
+    const layout = this.ws['!fileViewerLayout'] as StoredSheetLayout | undefined
+    if (!layout) return SheetJsModel.defaults
+    const columnWidth = layout.columnWidth === undefined ? undefined : getColumnPixelWidth(
+      { width: layout.columnWidth }, layout.maximumDigitWidth
+    )
+    return {
+      colWidth: columnWidth ?? SheetJsModel.defaults.colWidth,
+      rowHeight: layout.rowHeightPt === undefined ? SheetJsModel.defaults.rowHeight : Math.ceil(layout.rowHeightPt * 96 / 72)
+    }
   }
 
   public get data() {
@@ -875,7 +891,7 @@ export default class SheetJsModel implements SheetModel {
     // A drawing anchor is measured against the workbook's stored/default
     // column geometry. Auto-fitting blank columns to 24px changes that
     // coordinate system and makes two-cell images visibly smaller than Excel.
-    if (this.hasAnchoredObjects) {
+    if (this.hasAnchoredObjects || this.ws['!fileViewerLayout']) {
       return sourceColumn
     }
 
@@ -893,7 +909,10 @@ export default class SheetJsModel implements SheetModel {
     const { '!cols': sourceCols = [] } = this.ws as WorkSheet & { '!cols'?: SheetColumnMeta[] }
     const widths: number[] = []
     for (let colIndex = 0; colIndex < this.totalCols; colIndex += 1) {
-      const width = getColumnPixelWidth(this.getColumnMeta(sourceCols, colIndex))
+      const width = getColumnPixelWidth(
+        this.getColumnMeta(sourceCols, colIndex),
+        (this.ws['!fileViewerLayout'] as StoredSheetLayout | undefined)?.maximumDigitWidth
+      )
       if (width !== undefined) {
         widths[colIndex] = width
       }

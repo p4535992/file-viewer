@@ -1,11 +1,10 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { createReadStream } from 'node:fs'
-import { mkdir, readFile, writeFile, mkdtemp, stat } from 'node:fs/promises'
-import { createServer } from 'node:http'
+import { mkdir, readFile, writeFile, mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { resolve, join } from 'node:path'
 import { spawn, execFileSync } from 'node:child_process'
+import { createOptionalSdkRegistry } from './optional-sdk-registry.mjs'
 
 const root = resolve(import.meta.dirname, '../../../..')
 const fixtures = resolve(import.meta.dirname, '../test/types')
@@ -37,26 +36,7 @@ for (const row of input.packages) {
   assert.equal(manifest.version, row.version)
   packages.set(row.packageName, { row, tarball, manifest })
 }
-const server = createServer(async (request, response) => {
-  try {
-    const path = decodeURIComponent(new URL(request.url, 'http://localhost').pathname)
-    if (path.startsWith('/tarballs/')) {
-      const p = [...packages.values()].find(p => '/tarballs/' + p.row.tarball === path)
-      if (!p) return response.writeHead(404).end()
-      response.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': (await stat(p.tarball)).size })
-      if (request.method === 'HEAD') return response.end()
-      createReadStream(p.tarball).pipe(response)
-      return
-    }
-    const name = path.slice(1)
-    if (packages.has(name)) {
-      const p = packages.get(name)
-      const metadata = { ...p.manifest, dist: { tarball: registry + '/tarballs/' + p.row.tarball, integrity: p.row.integrity } }
-      const body = JSON.stringify({ name, 'dist-tags': { latest: p.row.version }, versions: { [p.row.version]: metadata } })
-      response.writeHead(200, { 'content-type': 'application/json', 'content-length': Buffer.byteLength(body) }).end(request.method === 'HEAD' ? undefined : body)
-    } else response.writeHead(307, { location: 'https://registry.npmjs.org' + request.url }).end()
-  } catch (error) { response.writeHead(500).end(String(error)) }
-})
+const server = createOptionalSdkRegistry(packages)
 await new Promise((ok, fail) => { server.once('error', fail); server.listen(0, '127.0.0.1', ok) })
 const registry = 'http://127.0.0.1:' + server.address().port
 report.privateTemporaryRegistry = registry

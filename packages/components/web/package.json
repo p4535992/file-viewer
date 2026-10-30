@@ -1,9 +1,9 @@
 {
   "name": "@file-viewer/web",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "private": false,
   "type": "module",
-  "description": "Standard pure web component package for File Viewer",
+  "description": "Lightweight Vanilla JS / Pure Web file viewer. Add PDF, Office and other browser-side previews with renderer presets.",
   "keywords": [
     "file-viewer",
     "document-preview",
@@ -29,7 +29,7 @@
     "url": "git+https://github.com/flyfish-dev/file-viewer.git",
     "directory": "packages/components/web"
   },
-  "homepage": "https://doc.file-viewer.app/",
+  "homepage": "https://github.com/flyfish-dev/file-viewer#readme",
   "bugs": {
     "url": "https://github.com/flyfish-dev/file-viewer/issues"
   },
@@ -68,13 +68,13 @@
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/core": "workspace:3.3.0"
+    "@file-viewer/core": "workspace:3.3.1"
   },
   "devDependencies": {
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.5",
     "esbuild": "^0.28.2",
     "typescript": "^6.0.3",
-    "vite": "8.3.4"
+    "vite": "8.3.5"
   },
   "license": "Apache-2.0"
 }

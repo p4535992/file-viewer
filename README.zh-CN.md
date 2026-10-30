@@ -16,6 +16,7 @@
 
 <p align="center">
   <a href="https://demo.file-viewer.app">在线 Demo</a> ·
+  <a href="https://flutter.file-viewer.app">Flutter SDK（开发预览）</a> ·
   <a href="https://doc.file-viewer.app">文档</a> ·
   <a href="https://github.com/flyfish-dev/file-viewer/wiki">GitHub Wiki</a> ·
   <a href="https://github.com/sponsors/wybaby168">GitHub Sponsors</a> ·
@@ -74,7 +75,7 @@
 
 ## 当前版本与新增能力
 
-当前源码正在准备 `3.3.0` 候选，接入已发布的 DOCX `0.3.39` 引擎；File Viewer 候选软件包与生产站点尚未发布，详见[候选变更说明](CHANGELOG.md)。
+修复内容与版本信息见[更新日志](CHANGELOG.md)。
 
 当前稳定版为 [v3.2.2](https://github.com/flyfish-dev/file-viewer/releases/tag/v3.2.2)。本页说明当前源码的能力；主分支与在线 Demo 可能包含稳定版之后的修复，使用 npm 或 Release 归档时请按对应版本验证。
 
@@ -117,6 +118,12 @@
 如果文件渲染异常，请先在 [Demo](https://demo.file-viewer.app) 验证，再使用带标注说明的 [Bug 表单](https://github.com/flyfish-dev/file-viewer/issues/new?template=bug_report.yml) 或 [文件兼容性表单](https://github.com/flyfish-dev/file-viewer/issues/new?template=compatibility.yml)。所有 Bug 必须提供公开/脱敏样例、公开复现链接，或注明私有样例已发送到 `admin@flyfish.dev`；截图可以帮助对比，但不能替代样例。
 
 如果这个方向刚好对你有用，也欢迎收藏项目。比起单纯 Star，我更希望收到真实场景下的兼容性反馈。
+
+## Flutter 开发预览
+
+[File Viewer Flutter](https://flutter.file-viewer.app) 已在 [pub.dev](https://pub.dev/packages/file_viewer_flutter) 发布 `0.1.0-dev.2` 开发预览版，提供随包分发的离线资源、应用级预热与会话复用。主文档提供 [Flutter 快速开始](docs/zh/guide/quickstart-flutter.md)，完整接入说明见 [Flutter 开发者站](https://flutter.file-viewer.app/zh/docs/quickstart/)。
+
+目标平台包括 Android、iOS、Web、Windows、macOS 和 Linux，实测范围与待完成验收见 [平台配置](https://flutter.file-viewer.app/zh/docs/platforms/)。会话保留在应用进程中，操作系统仍可能挂起或终止进程，不承诺永久后台运行。SDK 源码与可运行示例见 [Flutter 独立仓库](https://github.com/flyfish-dev/file-viewer-flutter)。
 
 ## 快速开始
 
