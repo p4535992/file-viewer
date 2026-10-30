@@ -73,9 +73,14 @@ async function files(directory) {
  * Original grants, generated inventories and source offers remain distinct.
  */
 export async function stageSharedAssetAttribution(viewerRoot, { sourceRoot = workspace, externalAssetOwners = [] } = {}) {
+  const assetOwners = {
+    'vendor/drawio/': '@file-viewer/assets-drawing',
+    'wasm/cad/': '@file-viewer/assets-cad',
+    'vendor/design/': '@file-viewer/assets-design'
+  }
   for (const owner of externalAssetOwners) {
-    assert.match(owner.prefix, /^(?:vendor\/drawio|wasm\/cad)\/$/, 'Only the established Full asset split can be delegated')
-    assert.ok(owner.packageName === (owner.prefix === 'vendor/drawio/' ? '@file-viewer/assets-drawing' : '@file-viewer/assets-cad'))
+    assert.ok(Object.hasOwn(assetOwners, owner.prefix), 'Only the established Full asset split can be delegated')
+    assert.equal(owner.packageName, assetOwners[owner.prefix])
     assert.match(owner.version, /^\d+\.\d+\.\d+$/)
     assert.equal(owner.inventoryPath, 'viewer/THIRD_PARTY_LICENSES.assets.json')
   }
@@ -94,8 +99,8 @@ export async function stageSharedAssetAttribution(viewerRoot, { sourceRoot = wor
   // SQL stager; the initial 55-material backlog did not include it.
   byDigest.set('60a3f6e4d7b29b4321359e683b36cf198d24f58e24582070f56e6fa89d5ee2be', {
     sha256: '60a3f6e4d7b29b4321359e683b36cf198d24f58e24582070f56e6fa89d5ee2be',
-    kind: 'original-license-grant', component: 'sql.js@1.14.1', declaredLicense: 'MIT',
-    source: 'https://www.npmjs.com/package/sql.js/v/1.14.1',
+    kind: 'original-license-grant', component: 'sql.js@1.15.2', declaredLicense: 'MIT',
+    source: 'https://www.npmjs.com/package/sql.js/v/1.15.2',
   })
   // These original installed CAD materials were already retained by the
   // version-checked normal CAD stager, outside the initial unmapped backlog.

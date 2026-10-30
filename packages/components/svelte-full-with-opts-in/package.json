@@ -1,6 +1,6 @@
 {
   "name": "@file-viewer/svelte-full-with-opts-in",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "private": false,
   "type": "module",
   "description": "svelte File Viewer full-with-opts-in package: all supported opt-ins enabled, AGPL CAD runtime excluded.",
@@ -53,7 +53,7 @@
     "type-check": "tsc -b tsconfig.json"
   },
   "dependencies": {
-    "@file-viewer/preset-full-with-opts-in": "workspace:3.3.1",
+    "@file-viewer/preset-full-with-opts-in": "workspace:3.3.2",
     "@file-viewer/svelte": "workspace:3.3.1"
   },
   "peerDependencies": {

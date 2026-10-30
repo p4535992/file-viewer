@@ -9,7 +9,14 @@ import { createRequire } from 'node:module'
 import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 
-const version = '3.3.1'
+const version = '3.3.2'
+const upstreamBaselineVersion = '3.3.1'
+// Official 3.3.2 is a PDF-focused partial release; all other workspace packages stay 3.3.1.
+const patchedPackageVersions = {
+  '@file-viewer/assets-standard': version,
+  '@file-viewer/capability-pdf-identity-repair': version,
+  '@file-viewer/renderer-pdf': version
+}
 const repo = process.env.GITHUB_WORKSPACE || process.cwd()
 const out = process.env.OUT_DIR
 const temp = process.env.RUNNER_TEMP
@@ -54,6 +61,11 @@ const presetPath = webRequire.resolve('@file-viewer/preset-full-with-opts-in/pac
 assert.ok(presetPath.startsWith(stage + '/'), 'Preset resolves outside offline bundle')
 file(presetPath)
 const presetRequire = createRequire(presetPath)
+for (const [name, expectedVersion] of Object.entries(patchedPackageVersions)) {
+  const packagePath = presetRequire.resolve(name + '/package.json')
+  const metadata = JSON.parse(await readFile(packagePath, 'utf8'))
+  assert.equal(metadata.version, expectedVersion, 'Required official 3.3.2 PDF patch missing: ' + name)
+}
 for (const name of [
   '@file-viewer/core', '@file-viewer/renderer-dicom',
   '@file-viewer/renderer-signature', '@file-viewer/renderer-design',
@@ -108,7 +120,9 @@ const conflicts = []
 for (const [id, name, bin] of installers) {
   const manifestPath = presetRequire.resolve(name + '/package.json')
   const pkg = JSON.parse(await readFile(manifestPath, 'utf8'))
-  assert.equal(pkg.version, version, 'Asset pack version mismatch: ' + name)
+  assert.equal(pkg.version,
+    patchedPackageVersions[name] || upstreamBaselineVersion,
+    'Asset pack version mismatch: ' + name)
   const cli = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.[bin]
   assert.ok(cli, 'Flyfish asset pack binary missing: ' + name)
   const target = join(packsRoot, id)
@@ -174,7 +188,7 @@ const xmlDir = join(assetRoot, 'xml')
 run(process.execPath, ['packages/renderers/text/bin/copy-xml-profile-assets.mjs', xmlDir])
 const xmlManifest = JSON.parse(await readFile(join(xmlDir, 'manifest.json'), 'utf8'))
 assert.equal(xmlManifest.schema, 1, 'Malformed Flyfish XML asset manifest')
-for (const [name, version] of [['xmllint-wasm', '5.3.0'], ['xslt-polyfill', '1.0.31']]) {
+for (const [name, version] of [['xmllint-wasm', '5.3.0'], ['xslt-polyfill', '1.0.33']]) {
   assert.equal(xmlManifest.engines.find(x => x.name === name)?.version, version,
     'XML engine version not pinned to upstream: ' + name)
 }
@@ -223,9 +237,11 @@ for (const needed of ['@file-viewer/assets-standard', '@file-viewer/assets-typst
 }
 const ledger = { entries: assetPackDetails, paths: await walk(assetRoot) }
 const document = [
-  '# File Viewer v3.3.1 — full opt-in offline distribution',
+  '# File Viewer v3.3.2 — full opt-in offline distribution',
   '',
-  'Built against flyfish-dev/file-viewer v3.3.1 with additive opt-in wrappers.',
+  'Built against flyfish-dev/file-viewer v3.3.2 with additive opt-in wrappers.',
+  'PDF renderer, PDF identity repair and standard assets are official v3.3.2;',
+  'untouched File Viewer packages retain their official v3.3.1 versions.',
   'web/ includes precompiled ESM and all installed production dependencies,',
   'including the project renderer packages and third-party runtime modules.',
   'Use web/dist/index.js with your bundler without recompiling File Viewer.',
@@ -265,7 +281,9 @@ const sizes = Object.fromEntries([
 const manifest = {
   schemaVersion: 1,
   upstreamVersion: version,
-  upstreamReleaseCommit: '410ed36a192c3da06ea21f66837b73bc09e9c0a5',
+  upstreamReleaseCommit: 'd6bcb1a9fc336267f025de7ea1e0e1b9ac1a0eb1',
+  upstreamBaselineVersion,
+  patchedPackageVersions,
   sourceCommit: process.env.GITHUB_SHA || null,
   tarballs: all,
   runtimeAssets: {

@@ -1,9 +1,9 @@
 name: Build full-with-opts-in release
 
-run-name: full-with-opts-in v3.3.1-r1 Geo3D+XML from ${{ github.ref_name }} (${{ github.run_number }})
+run-name: full-with-opts-in v3.3.2-r1 Geo3D+XML from ${{ github.ref_name }} (${{ github.run_number }})
 
 on:
-  # Build the complete v3.3.1-r1 opt-in offline distribution (including Geo3D and XML).
+  # Build the complete v3.3.2-r1 opt-in offline distribution (including Geo3D and XML).
   # Trigger a fresh branch build from the current head; prior run retries use old commits.
   push:
     branches:
@@ -42,6 +42,42 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+
+      - name: Verify official partial-release package versions and custom opt-in dependencies
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const read = path => JSON.parse(readFileSync(path, 'utf8'))
+          const official = read('artifacts/npm-release-manifest.json')
+          const custom = read('packages/presets/full-with-opts-in/package.json')
+          assert.equal(official.version, '3.3.2')
+          assert.equal(official.baselineVersion, '3.3.1')
+          assert.equal(custom.version, '3.3.2')
+          const patched = [
+            '@file-viewer/assets-standard',
+            '@file-viewer/renderer-pdf',
+            '@file-viewer/capability-pdf-identity-repair'
+          ]
+          for (const name of patched) {
+            assert.equal(official.packageVersionOverrides[name], '3.3.2')
+            assert.equal(custom.dependencies[name], '3.3.2')
+          }
+          for (const [name, declared] of Object.entries(custom.dependencies)) {
+            if (name.startsWith('@file-viewer/') && !patched.includes(name)) {
+              assert.equal(declared, 'workspace:3.3.1', 'Unexpected unchanged workspace version: ' + name)
+            }
+          }
+          for (const name of [
+            'web', 'vue3', 'vue2.7', 'vue2.6', 'react', 'react-legacy', 'jquery', 'svelte'
+          ]) {
+            const wrapper = read('packages/components/' + name + '-full-with-opts-in/package.json')
+            assert.equal(wrapper.version, '3.3.2')
+            assert.equal(wrapper.dependencies['@file-viewer/preset-full-with-opts-in'], 'workspace:3.3.2')
+            assert.equal(wrapper.dependencies['@file-viewer/' + name], 'workspace:3.3.1')
+          }
+          console.log('Official 3.3.2 PDF patch and 3.3.1 baseline are consistent.')
+          NODE
 
       # The opt-in wrappers are branch-specific and add new workspace importers.
       # Reconcile the lockfile in the runner and retain it for reproducibility.
@@ -142,11 +178,11 @@ jobs:
           "$tool_dir/wasm-opt" --version
           echo "$tool_dir" >> "$GITHUB_PATH"
 
-      # Upstream 3.3.1 retained-license staging validates generated Workers.
+      # Upstream 3.3.2 retained-license staging validates generated Workers.
       # Its standard asset pack also requires the staged manifest before it builds.
-      # Require the v3.3.1-pinned IFC peer engine cohort in the preset.
+      # Require the v3.3.2-pinned IFC peer engine cohort in the preset.
       # Prebuild the three notice-bearing Workers AND the OCCT geometry bundle.
-      # The upstream 3.3.1 asset stager verifies OCCT's generated LGPL notice
+      # The upstream 3.3.2 asset stager verifies OCCT's generated LGPL notice
       # before copying assets; a source-only checkout lacks that notice.
       - name: Build core and license-verified Worker prerequisites
         run: |
@@ -208,8 +244,20 @@ jobs:
       - name: Verify Geo3D point cloud and 3TZ opt-in
         run: pnpm --filter @file-viewer/renderer-3d verify:geo3d
 
-      - name: Install Chromium for real XML XSD/XSLT fixture
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Install Chromium and WebKit for PDF CID and XML browser verification
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Verify v3.3.2 CID fonts without FontDescriptor in real Worker and fallback modes
+        run: pnpm --filter @file-viewer/renderer-pdf verify:cid-fonts
+
+      - name: Retain PDF CID font test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0 # v7.0.1
+        with:
+          name: pdf-cid-fonts-${{ github.sha }}
+          path: output/pdf-cid-fonts/**
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Verify XML XSD/XSLT profile rendering in Chromium
         run: pnpm --filter @file-viewer/renderer-text test:xml-profiles:browser
@@ -294,8 +342,9 @@ jobs:
             resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
             releaseLine: 'full-with-opts-in',
             offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 Flyfish optional asset packs', 'Geo3D LAS/LAZ/3TZ/COG local decoders and workers', 'XML XSD/XSLT local WASM engines', '9 wrapper tarballs'] },
-            upstreamReleaseTag: 'v3.3.1',
-            upstreamReleaseCommit: '410ed36a192c3da06ea21f66837b73bc09e9c0a5',
+            upstreamReleaseTag: 'v3.3.2',
+            upstreamBaselineVersion: '3.3.1',
+            upstreamReleaseCommit: 'd6bcb1a9fc336267f025de7ea1e0e1b9ac1a0eb1',
             upstreamRepository: 'flyfish-dev/file-viewer',
             sourceRepository: process.env.GITHUB_REPOSITORY,
             sourceRef: process.env.GITHUB_REF,
@@ -369,7 +418,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
-          RELEASE_TAG: v3.3.1-full-with-opts-in-r1
+          RELEASE_TAG: v3.3.2-full-with-opts-in-r1
         run: |
           if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::Release $RELEASE_TAG already exists; refusing to overwrite it."
@@ -378,9 +427,10 @@ jobs:
 
           notes="$RUNNER_TEMP/full-with-opts-in-release-notes.md"
           cat > "$notes" <<EOF
-          ## File Viewer v3.3.1 — full-with-opts-in (complete Geo3D + XML)
+          ## File Viewer v3.3.2 — full-with-opts-in (complete Geo3D + XML)
 
           Built from branch build/web-full-with-opts-in at commit $GITHUB_SHA.
+          Upstream v3.3.2 is a PDF-focused patch; unchanged packages remain v3.3.1.
           The default branch is not modified.
 
           Contains nine npm package tarballs: the full-with-opts-in preset, Web,
@@ -389,7 +439,7 @@ jobs:
 
           The separate full-with-opts-in-offline.tar.gz contains the precompiled
           Web production dependency closure, all allowed optional runtime asset
-          packs, same-version local Workers/WASM/fonts/vendor files, self-hosted
+          packs, release-compatible local Workers/WASM/fonts/vendor files, self-hosted
           Geo3D LAS/LAZ/COPC/GeoTIFF/COG/CityJSON/3D Tiles/3TZ decoders, XML
           XSD/XSLT WASM engines, and the nine wrapper tarballs. Refer to its README.md for installation and scope.
 
@@ -412,7 +462,7 @@ jobs:
             "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "File Viewer v3.3.1 — full-with-opts-in (Geo3D + XML)" \
+            --title "File Viewer v3.3.2 — full-with-opts-in (Geo3D + XML)" \
             --notes-file "$notes" \
             --prerelease \
             --latest=false
