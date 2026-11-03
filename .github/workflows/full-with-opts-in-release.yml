@@ -1,0 +1,416 @@
+name: Build full-with-opts-in release
+
+run-name: full-with-opts-in v3.3.3-r1 Geo3D+XML+CAD from ${{ github.ref_name }} (${{ github.run_number }})
+
+on:
+  # Build v3.3.3-r1 with all opt-ins, including Geo3D, XML and CAD.
+  # Trigger a fresh branch build from the current head; prior run retries use old commits.
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/full-with-opts-in-release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-with-opts-in-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build, verify and pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 11.0.9
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Verify official 3.3.3 and custom opt-in package alignment
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const read = path => JSON.parse(readFileSync(path, 'utf8'))
+          const official = read('artifacts/npm-release-manifest.json')
+          assert.equal(official.version, '3.3.3')
+          assert.equal(official.packageCount, 89, 'Require the complete official package cohort')
+          const names = new Set(official.packages.map(item => item.packageName))
+          for (const name of ['@file-viewer/renderer-cad', '@file-viewer/assets-cad', '@file-viewer/preset-all']) {
+            assert(names.has(name), 'Official release is missing ' + name)
+          }
+          const custom = read('packages/presets/full-with-opts-in/package.json')
+          assert.equal(custom.version, '3.3.3')
+          for (const [name, spec] of Object.entries(custom.dependencies)) {
+            if (name.startsWith('@file-viewer/')) {
+              assert.equal(spec, 'workspace:3.3.3', 'Wrong preset dependency version: ' + name)
+            }
+          }
+          for (const family of ['web','vue3','vue2.7','vue2.6','react','react-legacy','jquery','svelte']) {
+            const wrapper = read('packages/components/' + family + '-full-with-opts-in/package.json')
+            assert.equal(wrapper.version, '3.3.3')
+            assert.equal(wrapper.dependencies['@file-viewer/preset-full-with-opts-in'], 'workspace:3.3.3')
+            assert.equal(wrapper.dependencies['@file-viewer/' + family], 'workspace:3.3.3')
+          }
+          console.log('All nine opt-in packages align with the complete official 3.3.3 cohort.')
+          NODE
+
+      # The opt-in wrappers are branch-specific and add new workspace importers.
+      # Reconcile the lockfile in the runner and retain it for reproducibility.
+      - name: Install dependencies and resolve workspace lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Save resolved lockfile in release bundle
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          mkdir -p "$OUT_DIR"
+          cp pnpm-lock.yaml "$OUT_DIR/resolved-pnpm-lock.yaml"
+
+      - name: Verify CAD DWG DWF DWFX dependencies and registered formats
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { readFileSync } from 'node:fs'
+          const read = path => JSON.parse(readFileSync(path, 'utf8'))
+          const preset = read('packages/presets/full-with-opts-in/package.json')
+          for (const name of ['@file-viewer/renderer-cad', '@file-viewer/assets-cad']) {
+            assert.equal(preset.dependencies[name], 'workspace:3.3.3')
+          }
+          const owner = read('packages/renderers/cad/package.json')
+          assert.equal(owner.dependencies['@flyfish-dev/cad-viewer'], '0.8.3')
+          const matrix = read('artifacts/release-matrix.json')
+          const formats = new Set(matrix.renderChains.filter(x => x.rendererId === 'cad').map(x => x.extension))
+          for (const ext of ['dwg','dwf','dwfx']) {
+            assert(formats.has(ext), 'Missing CAD format in matrix: ' + ext)
+          }
+          console.log('CAD including dwf-viewer WASM must be packed in this release.')
+          NODE
+
+      - name: Set up Rust WASM toolchain
+        run: |
+          rustup target add wasm32-unknown-unknown
+          cargo install wasm-bindgen-cli --version 0.2.127 --locked
+
+      - name: Set up pinned Binaryen WASM optimizer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tool_dir="$RUNNER_TEMP/file-viewer-binaryen"
+          archive="$tool_dir/binaryen-version_132-node.tar.gz"
+          mkdir -p "$tool_dir"
+          gh release download version_132 \
+            --repo WebAssembly/binaryen \
+            --pattern binaryen-version_132-node.tar.gz \
+            --dir "$tool_dir"
+          printf '%s  %s\n' \
+            'f2f49e583f5eafbe2af5da8470177d4d10aedf149752f5dd97736f54eba6f6a2' \
+            "$archive" | sha256sum --check --status
+          tar -xzf "$archive" -C "$tool_dir"
+          printf '%s\n' '#!/usr/bin/env bash' \
+            "exec node '$tool_dir/binaryen-version_132/wasm-opt.js' \"\$@\"" \
+            > "$tool_dir/wasm-opt"
+          chmod +x "$tool_dir/wasm-opt"
+          "$tool_dir/wasm-opt" --version
+          echo "$tool_dir" >> "$GITHUB_PATH"
+
+      # Upstream 3.3.3 retained-license staging validates generated Workers.
+      # Its standard asset pack also requires the staged manifest before it builds.
+      # Require the v3.3.3-pinned IFC peer engine cohort in the preset.
+      # Prebuild notice-bearing Workers, CAD prerequisites and the OCCT geometry bundle.
+      # The upstream 3.3.3 asset stager verifies OCCT's generated LGPL notice
+      # before copying assets; a source-only checkout lacks that notice.
+      - name: Build core and license-verified Worker prerequisites
+        run: |
+          pnpm --filter @file-viewer/core build
+          pnpm --filter @file-viewer/renderer-iwork --filter @file-viewer/renderer-hangul --filter @file-viewer/renderer-spreadsheet build
+          pnpm --filter @file-viewer/geometry-engine build
+          # Flyfish's immutable runtime attribution requires generated original
+          # PDF.js grants and specialist Worker payloads before asset staging.
+          pnpm --filter @file-viewer/renderer-cad... build
+          pnpm --filter @file-viewer/renderer-pdf... build
+          pnpm --filter @file-viewer/renderer-design... build
+          pnpm --filter @file-viewer/renderer-chm... build
+          pnpm --filter @file-viewer/renderer-media... build
+
+      - name: Stage runtime assets for the standard pack
+        run: pnpm --filter file-viewer-copy-assets stage-assets
+
+      - name: Build full-with-opts-in dependency closure
+        run: pnpm --filter @file-viewer/preset-full-with-opts-in... build
+
+      - name: Build base framework components for opt-in wrappers
+        run: |
+          pnpm --filter @file-viewer/web \
+            --filter @file-viewer/vue3 \
+            --filter @file-viewer/vue2.7 \
+            --filter @file-viewer/vue2.6 \
+            --filter @file-viewer/react \
+            --filter @file-viewer/react-legacy \
+            --filter @file-viewer/jquery \
+            --filter @file-viewer/svelte build
+
+      - name: Enable jQuery ambient types for opt-in wrapper (runner only)
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from 'node:fs'
+          const path = 'packages/components/jquery-full-with-opts-in/tsconfig.json'
+          const config = JSON.parse(readFileSync(path, 'utf8'))
+          config.compilerOptions.types = [
+            ...new Set([...(config.compilerOptions.types || []), 'jquery'])
+          ]
+          writeFileSync(path, JSON.stringify(config, null, 2) + '\n')
+          NODE
+
+      - name: Build full-with-opts-in wrappers
+        run: pnpm --filter './packages/components/*-full-with-opts-in' build
+
+      - name: Type-check new release line
+        run: |
+          pnpm --filter @file-viewer/preset-full-with-opts-in type-check
+          pnpm --filter './packages/components/*-full-with-opts-in' type-check
+
+      - name: Verify specialist opt-ins
+        run: |
+          pnpm verify:dicom-license-ledger
+          pnpm --filter @file-viewer/renderer-3d verify:ifc
+          pnpm --filter @file-viewer/renderer-signature verify:licenses
+          pnpm --filter @file-viewer/renderer-cad verify:color-mode
+          node --test packages/build-support/stage-cad-runtime.test.mjs
+
+      # Exercise Flyfish's own Geo3D contracts and the real Chromium XSD/XSLT
+      # browser fixture; this guards against missing optional peers and loaders.
+      - name: Verify Geo3D point cloud and 3TZ opt-in
+        run: pnpm --filter @file-viewer/renderer-3d verify:geo3d
+
+      - name: Install Chromium and WebKit for PDF CID and XML browser verification
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Verify v3.3.3 CID fonts without FontDescriptor in real Worker and fallback modes
+        run: pnpm --filter @file-viewer/renderer-pdf verify:cid-fonts
+
+      - name: Retain PDF CID font test evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pdf-cid-fonts-${{ github.sha }}
+          path: output/pdf-cid-fonts/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Verify XML XSD/XSLT profile rendering in Chromium
+        run: pnpm --filter @file-viewer/renderer-text test:xml-profiles:browser
+
+      - name: Pack release tarballs
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          mkdir -p "$OUT_DIR"
+          packages=(
+            '@file-viewer/preset-full-with-opts-in'
+            '@file-viewer/web-full-with-opts-in'
+            '@file-viewer/vue3-full-with-opts-in'
+            '@file-viewer/vue2.7-full-with-opts-in'
+            '@file-viewer/vue2.6-full-with-opts-in'
+            '@file-viewer/react-full-with-opts-in'
+            '@file-viewer/react-legacy-full-with-opts-in'
+            '@file-viewer/jquery-full-with-opts-in'
+            '@file-viewer/svelte-full-with-opts-in'
+          )
+          for package in "${packages[@]}"; do
+            pnpm --filter "$package" pack --pack-destination "$OUT_DIR"
+          done
+
+      # The upstream distribution is compiled packages PLUS version-matched
+      # Worker/WASM/font/vendor asset packs. Stage specialist packs before using
+      # the preset's own transactional asset installers.
+      - name: Stage optional offline asset packs
+        run: |
+          for capability in cad typst model drawing iwork ppt hangul wordperfect chm data design; do
+            pnpm --filter "@file-viewer/assets-$capability" stage-assets
+          done
+
+      # Resolve deployed pnpm modules through their nested production closure.
+      - name: Assemble and verify full offline distribution
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: node .github/scripts/build-full-with-opts-in-offline.mjs
+
+      - name: Generate manifest and checksums
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto'
+          import { readdir, writeFile } from 'node:fs/promises'
+          import { createReadStream } from 'node:fs'
+          import { basename, join } from 'node:path'
+
+          const root = process.env.OUT_DIR
+          const names = await readdir(root)
+          const tarballs = names.filter(name => name.endsWith('.tgz'))
+          const offline = names.filter(name => name.endsWith('-offline.tar.gz'))
+          if (tarballs.length !== 9 || offline.length !== 1) {
+            throw new Error(`Expected 9 npm packages + 1 offline archive, found ${tarballs.length} and ${offline.length}`)
+          }
+          const files = [...tarballs, ...offline].sort()
+
+          const artifacts = []
+          const sums = []
+          async function digest(path) {
+            const hash = createHash('sha256')
+            let size = 0
+            for await (const chunk of createReadStream(path)) {
+              hash.update(chunk)
+              size += chunk.length
+            }
+            return { sha256: hash.digest('hex'), bytes: size }
+          }
+          for (const name of files) {
+            const { sha256, bytes } = await digest(join(root, name))
+            artifacts.push({ name, bytes, sha256 })
+            sums.push(`${sha256}  ${name}`)
+          }
+
+          const lockfileName = 'resolved-pnpm-lock.yaml'
+          const { sha256: lockfileSha256 } = await digest(join(root, lockfileName))
+          sums.push(`${lockfileSha256}  ${lockfileName}`)
+
+          const manifest = {
+            schemaVersion: 1,
+            resolvedLockfile: { name: lockfileName, sha256: lockfileSha256 },
+            releaseLine: 'full-with-opts-in',
+            offlineBundle: { name: offline[0], contains: ['precompiled web dependency closure', '11 Flyfish optional asset packs', 'Geo3D LAS/LAZ/3TZ/COG local decoders and workers', 'XML XSD/XSLT local WASM engines', '9 wrapper tarballs'] },
+            upstreamReleaseTag: 'v3.3.3',
+            upstreamBaselineVersion: '3.3.3',
+            upstreamReleaseCommit: '760038d88e9252bc746c04626b82b84226ef6948',
+            upstreamRepository: 'flyfish-dev/file-viewer',
+            sourceRepository: process.env.GITHUB_REPOSITORY,
+            sourceRef: process.env.GITHUB_REF,
+            sourceSha: process.env.GITHUB_SHA,
+            generatedAt: new Date().toISOString(),
+            cadRuntimePolicy: {
+              excluded: true,
+              forbiddenPackages: [
+                '@file-viewer/renderer-cad',
+                '@file-viewer/assets-cad',
+                '@flyfish-dev/cad-viewer',
+                'dwf-viewer'
+              ]
+            },
+            artifacts
+          }
+
+          await writeFile(
+            join(root, 'full-with-opts-in-manifest.json'),
+            JSON.stringify(manifest, null, 2) + '\n'
+          )
+          await writeFile(join(root, 'SHA256SUMS.txt'), sums.join('\n') + '\n')
+          console.log(`Verified ${tarballs.length} npm tarballs and ${offline.length} complete offline archive.`)
+          NODE
+
+      - name: Show packaged files
+        env:
+          OUT_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          ls -lah "$OUT_DIR"
+          cat "$OUT_DIR/SHA256SUMS.txt"
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: full-with-opts-in-${{ github.sha }}
+          path: ${{ runner.temp }}/full-with-opts-in-release
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish full-with-opts-in GitHub prerelease
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Download and verify the build bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
+        run: |
+          mkdir -p "$RELEASE_DIR"
+          gh run download "$GITHUB_RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "full-with-opts-in-$GITHUB_SHA" \
+            --dir "$RELEASE_DIR"
+          test "$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*.tgz' | wc -l)" -eq 9
+          test "$(find "$RELEASE_DIR" -maxdepth 1 -type f -name '*-offline.tar.gz' | wc -l)" -eq 1
+          test "$(stat -c '%s' "$RELEASE_DIR"/*-offline.tar.gz)" -gt 15000000
+          test -s "$RELEASE_DIR/full-with-opts-in-manifest.json"
+          test -s "$RELEASE_DIR/resolved-pnpm-lock.yaml"
+          test -s "$RELEASE_DIR/SHA256SUMS.txt"
+          (cd "$RELEASE_DIR" && sha256sum --check SHA256SUMS.txt)
+
+      - name: Create branch-targeted GitHub prerelease (not npm)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_DIR: ${{ runner.temp }}/full-with-opts-in-release
+          RELEASE_TAG: v3.3.3-full-with-opts-in-r1
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $RELEASE_TAG already exists; refusing to overwrite it."
+            exit 1
+          fi
+
+          notes="$RUNNER_TEMP/full-with-opts-in-release-notes.md"
+          cat > "$notes" <<EOF
+          ## File Viewer v3.3.3 — full-with-opts-in (Geo3D + XML + CAD)
+          
+          Built from the v3.3.3 source on main at commit $GITHUB_SHA.
+          All nine custom opt-in preset and wrapper archives use the official 3.3.3 cohort.
+          
+          The offline tarball includes the compiled Web production dependency closure,
+          all optional self-hosted Worker/WASM/fonts/vendor asset packs,
+          Geo3D LAS/LAZ/COPC/GeoTIFF/COG/CityJSON/3D Tiles/3TZ decoders,
+          XML XSD/XSLT engines, and the nine custom npm tarballs.
+          
+          CAD/DWG/DWF/DWFX are included via @flyfish-dev/cad-viewer 0.8.3,
+          dwf-viewer 0.6.7, and the original LibreDWG files.
+          CAD assets retain their AGPL/GPL licenses, notices and corresponding source.
+          See the offline bundle README for installation and obligations.
+          
+          SHA256SUMS.txt verifies archived bytes; the JSON manifest records their origin.
+          This is a GitHub prerelease with build artifacts, not an npm publication.
+          EOF
+
+          gh release create "$RELEASE_TAG" \
+            "$RELEASE_DIR"/*.tgz \
+            "$RELEASE_DIR"/*-offline.tar.gz \
+            "$RELEASE_DIR"/full-with-opts-in-manifest.json \
+            "$RELEASE_DIR"/SHA256SUMS.txt \
+            "$RELEASE_DIR"/resolved-pnpm-lock.yaml \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "File Viewer v3.3.3 — full-with-opts-in (Geo3D + XML + CAD)" \
+            --notes-file "$notes" \
+            --prerelease \
+            --latest=false
