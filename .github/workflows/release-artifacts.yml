@@ -69,6 +69,79 @@ jobs:
           echo "$RUNNER_TEMP/file-viewer-npm/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Download and byte-check immutable release archives
         run: node .github/scripts/runtime-ci-artifacts.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/runtime-candidate"
+      - name: Validate optional DWG, DWF and DWFX runtime in full frozen releases
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict'
+          import { execFileSync } from 'node:child_process'
+          import { readFile } from 'node:fs/promises'
+          import { join } from 'node:path'
+
+          const manifest = JSON.parse(await readFile('artifacts/npm-release-manifest.json', 'utf8'))
+          const matrix = JSON.parse(await readFile('artifacts/release-matrix.json', 'utf8'))
+          assert.equal(manifest.packages.length, manifest.packageCount)
+          const packages = new Map(manifest.packages.map(item => [item.packageName, item]))
+          const expected = matrix.packages.map(item => item.packageName).sort()
+          const full = manifest.packageCount === expected.length
+          if (!full) {
+            console.log('Partial release: full optional CAD asset closure is not required.')
+          } else {
+            assert.deepEqual([...packages.keys()].sort(), expected, 'Incomplete full release package set')
+            const required = [
+              '@file-viewer/assets-cad',
+              '@file-viewer/renderer-cad',
+              '@file-viewer/preset-all',
+              '@file-viewer/web-full'
+            ]
+            for (const name of required) {
+              assert(packages.has(name), 'Full release missing ' + name)
+            }
+            const archive = name => join(process.env.RUNNER_TEMP, 'runtime-candidate', packages.get(name).tarball)
+            const readPackage = name => JSON.parse(execFileSync(
+              'tar', ['-xOf', archive(name), 'package/package.json'], { encoding: 'utf8' }
+            ))
+            const renderer = readPackage('@file-viewer/renderer-cad')
+            const cadVersion = renderer.dependencies['@flyfish-dev/cad-viewer']
+            assert.match(cadVersion, /^\d+\.\d+\.\d+$/, 'CAD runtime must be pinned')
+            const preset = readPackage('@file-viewer/preset-all')
+            const webFull = readPackage('@file-viewer/web-full')
+            const matchVersion = spec => String(spec).replace(/^workspace:/, '') === manifest.version
+            assert(matchVersion(preset.dependencies['@file-viewer/renderer-cad']))
+            assert(matchVersion(webFull.dependencies['@file-viewer/renderer-cad']))
+            assert(matchVersion(webFull.dependencies['@file-viewer/assets-cad']))
+
+            const cadArchive = archive('@file-viewer/assets-cad')
+            const inventory = new Set(execFileSync('tar', ['-tf', cadArchive], {
+              encoding: 'utf8', maxBuffer: 32 * 1024 * 1024
+            }).split(/\r?\n/).map(item => item.replace(/^\.\//, '')))
+            const prefix = 'package/viewer/wasm/cad/' + cadVersion + '/'
+            for (const name of [
+              'dwg-worker.js', 'dwfv-render.wasm', 'libredwg-web.js', 'libredwg-web.wasm',
+              'LICENSE', 'NOTICE', 'GPL-3.0.txt',
+              'CORRESPONDING_SOURCE_NOTICE.txt', 'CORRESPONDING_SOURCE.zip'
+            ]) {
+              assert(inventory.has(prefix + name), 'Missing CAD release asset: ' + prefix + name)
+            }
+            for (const name of ['dwfv-render.wasm', 'libredwg-web.wasm']) {
+              const bytes = execFileSync('tar', ['-xOf', cadArchive, prefix + name], {
+                maxBuffer: 32 * 1024 * 1024
+              })
+              assert(bytes.length > 0, 'Empty CAD runtime: ' + name)
+            }
+            const notice = execFileSync('tar', [
+              '-xOf', cadArchive, prefix + 'CORRESPONDING_SOURCE_NOTICE.txt'
+            ], { encoding: 'utf8' })
+            assert(notice.includes('@flyfish-dev/cad-viewer ' + cadVersion))
+            assert(notice.includes('dwf-viewer 0.6.7'))
+            const extensions = new Set(matrix.renderChains
+              .filter(chain => chain.rendererId === 'cad')
+              .map(chain => chain.extension))
+            for (const extension of ['dwg', 'dwf', 'dwfx']) {
+              assert(extensions.has(extension), 'Full matrix missing CAD extension ' + extension)
+            }
+            console.log('Validated full DWG/DWF/DWFX runtime and licensing in immutable CAD assets.')
+          }
+          NODE
       - name: Validate declarations, builds and offline Chromium and WebKit consumers
         run: node .github/scripts/runtime-ci-consumers.mjs "$GITHUB_WORKSPACE" "$RUNNER_TEMP/runtime-candidate"
       - name: Audit only approved frozen production scopes
